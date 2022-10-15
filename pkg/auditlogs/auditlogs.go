@@ -129,20 +129,17 @@ func (p *Plugin) Open(prms string) (source.Instance, error) {
 		if err != nil {
 			log.Fatal("Error when opening file: ", err)
 		}
-	
-		// Now let's unmarshall the data into `payload`
-		var payload LogEvent
-		err = json.Unmarshal(contents, &payload)
-	
-		if err != nil {
-			log.Fatal("Error during Unmarshal(): ", err)
-		}
 
 		evt.SetTimestamp(uint64(time.Now().UnixNano()))
-		
-		fmt.Printf("email: %s\n", payload.ProtoPayload.AuthenticationInfo.PrincipalEmail)
-		fmt.Printf("IP: %s\n", payload.ProtoPayload.RequestMetadata.CallerIp)
-		fmt.Printf("Method: %s\n", payload.ProtoPayload.MethodName)
+
+		// Write the event data
+		n, err := evt.Writer().Write(contents)
+
+		if err != nil {
+			return err
+		} else if n < len(contents) {
+			return fmt.Errorf("auditlogs message too long: %d, but %d were written", len(contents), n)
+		}
 		
 		return err
 
@@ -191,9 +188,6 @@ func (auditlogsPlugin *Plugin) Extract(req sdk.ExtractRequest, evt sdk.EventRead
 
 	auditlogsPlugin.lastLogEvent = data
 
-	fmt.Printf("%+v\n", data)
-
-
 	switch req.Field() {
 
 	case "auditlogs.principal":
@@ -206,7 +200,6 @@ func (auditlogsPlugin *Plugin) Extract(req sdk.ExtractRequest, evt sdk.EventRead
 }
 
 
-// todo: optimize this to cache by event number
 func (auditlogsPlugin *Plugin) String(evt sdk.EventReader) (string, error) {
 
 	evtBytes, err := ioutil.ReadAll(evt.Reader())
