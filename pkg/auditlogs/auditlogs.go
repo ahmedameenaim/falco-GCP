@@ -17,13 +17,12 @@ limitations under the License.
 package auditlogs
 
 import ( 
-	"context"
 	"encoding/json" 
     "fmt"
-    "strconv"
 	"io/ioutil"
+	"log"
+	"context"
 	"time"
-	"math/rand"
 
 	"github.com/alecthomas/jsonschema"
 	"github.com/falcosecurity/plugin-sdk-go/pkg/sdk"
@@ -40,18 +39,38 @@ const (
 	PluginEventSource        = "auditlogs"
 )
 
+
+// The data struct for the decoded data
+// Notice that all fields must be exportable!
+type LogEvent struct {
+    ProtoPayload struct {
+        AuthenticationInfo struct {
+            PrincipalEmail string `json:"principalEmail"`
+        } `json:"authenticationInfo"`
+
+        RequestMetadata struct {
+            CallerIp string `json: "callerIp"`
+        } `json: "requestMetadata"`
+
+        ServiceName string `json: "serviceName"`
+        MethodName string `json: "methodName"`
+    
+    
+    } `json: "protoPayload"`
+
+}
+
+
 type PluginConfig struct {
 	// This reflects potential internal state for the plugin. In
-	// this case, the plugin is configured with a jitter.
-	auditLogsFilePath string `json:"path" jsonschema:"title=Sample jitter,description=A random amount added to the sample of each event (Default: 10),default=10"`
-	Jitter uint64 `json:"jitter" jsonschema:"title=Sample jitter,description=A random amount added to the sample of each event (Default: 10),default=10"`
-
+	auditLogsFilePath string `json:"path" jsonschema:"title=Sample jitter,description=A random amount added"`
 }
 
 type Plugin struct {
 	plugins.BasePlugin
 
-	rand *rand.Rand
+	lastLogEvent LogEvent
+
 	// Contains the init configuration values
 	config PluginConfig
 }
@@ -86,9 +105,8 @@ func (auditlogsPlugin *Plugin) InitSchema() *sdk.SchemaInfo {
 
 func (auditlogsPlugin *Plugin) Init(cfg string) error {
 	// initialize state
-	auditlogsPlugin.rand = rand.New(rand.NewSource(time.Now().UnixNano()))
+	auditlogsPlugin.config.auditLogsFilePath = "/**/falcoplugin/gcp_audits.json"
 
-	auditlogsPlugin.config.setDefault()
 	err := json.Unmarshal([]byte(cfg), &auditlogsPlugin)
 
 	if err != nil {
@@ -103,64 +121,45 @@ func (auditlogsPlugin *Plugin) Destroy() {
 }
 
 
-
-// todo: optimize this to cache by event number
-func (m *Plugin) String(evt sdk.EventReader) (string, error) {
-	evtBytes, err := ioutil.ReadAll(evt.Reader())
-	if err != nil {
-		return "", err
-	}
-	evtStr := string(evtBytes)
-
-	// The string representation of an event is a json object with the sample
-	return fmt.Sprintf("{\"sample\": \"%s\"}", evtStr), nil
-}
-
 func (p *Plugin) Open(prms string) (source.Instance, error) {
-	// The open parameters is a positive integer which denotes the number of
-	// samples to generate before returning EOF. A list of example values
-	// is provided through OpenParams()
-	maxEvents, err := strconv.Atoi(prms)
-	if err != nil {
-		return nil, fmt.Errorf("can't read max events from open params: %s", err.Error())
-	}
-	if maxEvents <= 0 {
-		return nil, fmt.Errorf("invalid max events value: %d", maxEvents)
-	}
 
-	counter := uint64(0)
-	sample := uint64(p.rand.Int63n(int64(p.config.Jitter + 1)))
 	pull := func(ctx context.Context, evt sdk.EventWriter) error {
-		counter++
-		if counter > uint64(maxEvents) {
-			return sdk.ErrEOF
+
+		contents, err := ioutil.ReadFile(p.config.auditLogsFilePath)
+		if err != nil {
+			log.Fatal("Error when opening file: ", err)
+		}
+	
+		// Now let's unmarshall the data into `payload`
+		var payload LogEvent
+		err = json.Unmarshal(contents, &payload)
+	
+		if err != nil {
+			log.Fatal("Error during Unmarshal(): ", err)
 		}
 
-		// Increment sample by 1, also add a jitter of [0:jitter]
-		sample += 1 + uint64(p.rand.Int63n(int64(p.config.Jitter+1)))
-
-		// The representation of a dummy event is the sample as a string.
-		str := fmt.Sprintf("%d", sample)
-
-		// It is not mandatory to set the Timestamp of the event (it
-		// would be filled in by the framework if set to uint_max),
-		// but it's a good practice.
 		evt.SetTimestamp(uint64(time.Now().UnixNano()))
-
-		_, err := evt.Writer().Write([]byte(str))
+		
+		fmt.Printf("email: %s\n", payload.ProtoPayload.AuthenticationInfo.PrincipalEmail)
+		fmt.Printf("IP: %s\n", payload.ProtoPayload.RequestMetadata.CallerIp)
+		fmt.Printf("Method: %s\n", payload.ProtoPayload.MethodName)
+		
 		return err
+
 	}
+
+
 	return source.NewPullInstance(pull)
 }
-
 
 func (m *Plugin) Fields() []sdk.FieldEntry {
 	return []sdk.FieldEntry{
 		{
-			Type: "uint64",
-			Name: "dummy.divisible",
-			Desc: "Return 1 if the value is divisible by the provided divisor, 0 otherwise",
-			Arg:  sdk.FieldEntryArg{IsRequired: true, IsKey: true},
+			Type: "string",
+			Name: "auditlogs.principal",
+			Desc: "GCP principal email who committed the action",
+			// Arg:  sdk.FieldEntryArg{IsRequired: true, IsKey: true},
+
 		},
 		{
 			Type: "uint64",
@@ -176,37 +175,51 @@ func (m *Plugin) Fields() []sdk.FieldEntry {
 }
 
 
-func (m *Plugin) Extract(req sdk.ExtractRequest, evt sdk.EventReader) error {
+func (auditlogsPlugin *Plugin) Extract(req sdk.ExtractRequest, evt sdk.EventReader) error {
+	
+	data := auditlogsPlugin.lastLogEvent
+
 	evtBytes, err := ioutil.ReadAll(evt.Reader())
 	if err != nil {
 		return err
 	}
-	evtStr := string(evtBytes)
-	evtVal, err := strconv.Atoi(evtStr)
+
+	err = json.Unmarshal(evtBytes, &data)
 	if err != nil {
 		return err
 	}
 
-	switch req.FieldID() {
-	case 0: // dummy.divisible
-		divisor, err := strconv.Atoi(req.ArgKey())
-		if err != nil {
-			return fmt.Errorf("argument to dummy.divisible %s could not be converted to number", req.ArgKey())
-		}
-		if evtVal%divisor == 0 {
-			req.SetValue(uint64(1))
-		} else {
-			req.SetValue(uint64(0))
-		}
-	case 1: // dummy.value
-		req.SetValue(uint64(evtVal))
-	case 2: // dummy.strvalue
-		req.SetValue(evtStr)
+	auditlogsPlugin.lastLogEvent = data
+
+	fmt.Printf("%+v\n", data)
+
+
+	switch req.Field() {
+
+	case "auditlogs.principal":
+		req.SetValue(data.ProtoPayload.AuthenticationInfo.PrincipalEmail) 
 	default:
 		return fmt.Errorf("no known field: %s", req.Field())
 	}
 
 	return nil
+}
+
+
+// todo: optimize this to cache by event number
+func (auditlogsPlugin *Plugin) String(evt sdk.EventReader) (string, error) {
+
+	evtBytes, err := ioutil.ReadAll(evt.Reader())
+	if err != nil {
+		return "", err
+	}
+	evtStr := string(evtBytes)
+
+	fmt.Printf(evtStr)
+
+
+	// The string representation of an event is a json object with the sample
+	return fmt.Sprintf("{\"sample\": \"%s\"}", evtStr), nil
 }
 
 

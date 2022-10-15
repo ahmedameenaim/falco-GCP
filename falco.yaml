@@ -2,14 +2,14 @@ rules_file:
   - /etc/falco/falco_rules.yaml
   - /etc/falco/falco_rules.local.yaml
   - /etc/falco/rules.d
-  - /home/***/***/falcoplugin/rules/auditlogs_rules.yaml
+  - /home/sherlcok/Desktop/falcoplugin/rules/auditlogs_rules.yaml
 
 plugins:
-  - name: libauditlogs
+  - name: auditlogs
     library_path: /usr/share/falco/plugins/libauditlogs.so
-    init_config: '{"path": "/home/***/***/falcoplugin/gcp_audits.json"}'
+    init_config: '{"path": "/**/falcoplugin/gcp_audits.json"}'
 
-load_plugins: [libauditlogs]
+load_plugins: [auditlogs]
 
 stdout_output:
   enabled: true

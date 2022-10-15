@@ -3,3 +3,11 @@
 - required_plugin_versions:
   - name: auditlogs
     version: 0.5.0
+
+- rule: Delete GCS bucket
+  desc: Detect deletion of a GCS bucket.
+  condition: auditlogs.principal="ahmed.amin@test.com"
+  output: A GCS bucket has been deleted requesting user=%auditlogs.principal
+  priority: DEBUG
+  source: auditlogs
+  tags: [GCP, buckets]
