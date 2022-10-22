@@ -6,20 +6,19 @@
 
 
 - macro: is_gcs_service
-  condition: gcp.service.name="storage.googleapis.com"
+  condition: al.service.name="storage.googleapis.com"
 
 - rule: GCP Bucket deleted
   desc: Detect deletion of a GCS bucket.
-  condition: is_gcs_service and gcp.method.name="storage.buckets.delete"
+  condition: is_gcs_service and al.method.name="storage.buckets.delete"
   output: A GCS bucket has been deleted by user=%al.principal
   priority: DEBUG
   source: auditlogs
   tags: [GCP, buckets, mitre_data_destruction]
 
-
 - rule: GCP Bucket permissions modified
   desc: Detect when permissions have changed on a GCS Bucket.
-  condition: is_gcs_service and gcp.method.name="storage.setIamPermissions"
+  condition: is_gcs_service and al.method.name="storage.setIamPermissions"
   output: A GCS bucket Iam policy has been changed by user=%al.principal
   priority: DEBUG
   source: auditlogs

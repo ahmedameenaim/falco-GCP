@@ -149,31 +149,18 @@ func (p *Plugin) Open(prms string) (source.Instance, error) {
 	return source.NewPullInstance(pull)
 }
 
-func (m *Plugin) Fields() []sdk.FieldEntry {
+func (auditlogsPlugin *Plugin) Fields() []sdk.FieldEntry {
 	return []sdk.FieldEntry{
-		{
-			Type: "string",
-			Name: "al.principal",
-			Desc: "GCP principal email who committed the action",
-			// Arg:  sdk.FieldEntryArg{IsRequired: true, IsKey: true},
-		},
-		{
-			Type: "string",
-			Name: "gcp.service.name",
-			Desc: "GCP service API",
-		},
-		{
-			Type: "string",
-			Name: "gcp.method.name",
-			Desc: "GCP service API method executed",
-		},
+		{Type: "string", Name: "al.principal", Desc: "GCP principal email who committed the action"},
+		{Type: "string", Name: "al.service.name", Desc: "GCP API service name"},
+		{Type: "string", Name: "al.method.name", Desc: "GCP API service  method executed"},
 	}
 }
 
 
 func (auditlogsPlugin *Plugin) Extract(req sdk.ExtractRequest, evt sdk.EventReader) error {
 	
-	fmt.Println("Im here")
+	fmt.Println("Im here 3")
 	
 	
 	data := auditlogsPlugin.lastLogEvent
@@ -195,9 +182,9 @@ func (auditlogsPlugin *Plugin) Extract(req sdk.ExtractRequest, evt sdk.EventRead
 
 	case "al.principal":
 		req.SetValue(data.ProtoPayload.AuthenticationInfo.PrincipalEmail)
-	case "gcp.service.name":
+	case "al.service.name":
 		req.SetValue(data.ProtoPayload.ServiceName) 
-	case "gcp.method.name":
+	case "al.method.name":
 		req.SetValue(data.ProtoPayload.MethodName) 
 	default:
 		return fmt.Errorf("no known field: %s", req.Field())
