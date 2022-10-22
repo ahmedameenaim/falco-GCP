@@ -72,10 +72,9 @@ type Plugin struct {
 
 	// Contains the init configuration values
 	config PluginConfig
+	
 }
 
-func (p *PluginConfig) setDefault() {
-}
 
 func (auditlogsPlugin *Plugin) Info() *plugins.Info {
 	return &plugins.Info{
@@ -115,9 +114,6 @@ func (auditlogsPlugin *Plugin) Init(cfg string) error {
 	return nil
 }
 
-func (auditlogsPlugin *Plugin) Destroy() {
-	// nothing to do here
-}
 
 
 func (p *Plugin) Open(prms string) (source.Instance, error) {
@@ -151,7 +147,7 @@ func (p *Plugin) Open(prms string) (source.Instance, error) {
 
 func (auditlogsPlugin *Plugin) Fields() []sdk.FieldEntry {
 	return []sdk.FieldEntry{
-		{Type: "string", Name: "al.principal", Desc: "GCP principal email who committed the action"},
+		{Type: "string", Name: "auditlogs.principal", Desc: "GCP principal email who committed the action"},
 		{Type: "string", Name: "al.service.name", Desc: "GCP API service name"},
 		{Type: "string", Name: "al.method.name", Desc: "GCP API service  method executed"},
 	}
@@ -162,8 +158,9 @@ func (auditlogsPlugin *Plugin) Extract(req sdk.ExtractRequest, evt sdk.EventRead
 	
 	fmt.Println("Im here 3")
 	
-	
 	data := auditlogsPlugin.lastLogEvent
+
+	fmt.Printf("%+v\n", data)
 
 	evtBytes, err := ioutil.ReadAll(evt.Reader())
 	if err != nil {

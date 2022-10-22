@@ -9,7 +9,7 @@ plugins:
     library_path: /usr/share/falco/plugins/libauditlogs.so
     init_config: '{"path": "/home/sherlock/Desktop/falcoplugin/gcp_audits.json"}'
 
-load_plugins: [auditlogs]
+load_plugins: [auditlogs, json]
 
 stdout_output:
   enabled: true
