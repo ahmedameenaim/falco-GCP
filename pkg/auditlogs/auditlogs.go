@@ -116,7 +116,7 @@ func (auditlogsPlugin *Plugin) Init(cfg string) error {
 
 
 
-func (p *Plugin) Open(prms string) (source.Instance, error) {
+func (p *Plugin) Open(params string) (source.Instance, error) {
 
 	pull := func(ctx context.Context, evt sdk.EventWriter) error {
 
@@ -142,12 +142,13 @@ func (p *Plugin) Open(prms string) (source.Instance, error) {
 	}
 
 
+
 	return source.NewPullInstance(pull)
 }
 
 func (auditlogsPlugin *Plugin) Fields() []sdk.FieldEntry {
 	return []sdk.FieldEntry{
-		{Type: "string", Name: "auditlogs.principal", Desc: "GCP principal email who committed the action"},
+		{Type: "string", Name: "al.principal", Desc: "GCP principal email who committed the action"},
 		{Type: "string", Name: "al.service.name", Desc: "GCP API service name"},
 		{Type: "string", Name: "al.method.name", Desc: "GCP API service  method executed"},
 	}
@@ -156,11 +157,10 @@ func (auditlogsPlugin *Plugin) Fields() []sdk.FieldEntry {
 
 func (auditlogsPlugin *Plugin) Extract(req sdk.ExtractRequest, evt sdk.EventReader) error {
 	
+	fmt.Printf("%+v\n", req)
 	fmt.Println("Im here 3")
 	
 	data := auditlogsPlugin.lastLogEvent
-
-	fmt.Printf("%+v\n", data)
 
 	evtBytes, err := ioutil.ReadAll(evt.Reader())
 	if err != nil {
@@ -199,11 +199,7 @@ func (auditlogsPlugin *Plugin) String(evt sdk.EventReader) (string, error) {
 	}
 	evtStr := string(evtBytes)
 
-	fmt.Printf(evtStr)
-
-
-	// The string representation of an event is a json object with the sample
-	return fmt.Sprintf("{\"sample\": \"%s\"}", evtStr), nil
+	return fmt.Sprintf("%v", evtStr), nil
 }
 
 
