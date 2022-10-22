@@ -41,7 +41,6 @@ const (
 
 
 // The data struct for the decoded data
-// Notice that all fields must be exportable!
 type LogEvent struct {
     ProtoPayload struct {
         AuthenticationInfo struct {
@@ -105,7 +104,7 @@ func (auditlogsPlugin *Plugin) InitSchema() *sdk.SchemaInfo {
 
 func (auditlogsPlugin *Plugin) Init(cfg string) error {
 	// initialize state
-	auditlogsPlugin.config.auditLogsFilePath = "/**/falcoplugin/gcp_audits.json"
+	auditlogsPlugin.config.auditLogsFilePath = "/home/sherlock/Desktop/falcoplugin/gcp_audits.json"
 
 	err := json.Unmarshal([]byte(cfg), &auditlogsPlugin)
 
@@ -126,6 +125,7 @@ func (p *Plugin) Open(prms string) (source.Instance, error) {
 	pull := func(ctx context.Context, evt sdk.EventWriter) error {
 
 		contents, err := ioutil.ReadFile(p.config.auditLogsFilePath)
+
 		if err != nil {
 			log.Fatal("Error when opening file: ", err)
 		}
@@ -153,20 +153,19 @@ func (m *Plugin) Fields() []sdk.FieldEntry {
 	return []sdk.FieldEntry{
 		{
 			Type: "string",
-			Name: "auditlogs.principal",
+			Name: "al.principal",
 			Desc: "GCP principal email who committed the action",
 			// Arg:  sdk.FieldEntryArg{IsRequired: true, IsKey: true},
-
-		},
-		{
-			Type: "uint64",
-			Name: "dummy.value",
-			Desc: "The sample value in the event",
 		},
 		{
 			Type: "string",
-			Name: "dummy.strvalue",
-			Desc: "The sample value in the event, as a string",
+			Name: "gcp.service.name",
+			Desc: "GCP service API",
+		},
+		{
+			Type: "string",
+			Name: "gcp.method.name",
+			Desc: "GCP service API method executed",
 		},
 	}
 }
@@ -174,12 +173,16 @@ func (m *Plugin) Fields() []sdk.FieldEntry {
 
 func (auditlogsPlugin *Plugin) Extract(req sdk.ExtractRequest, evt sdk.EventReader) error {
 	
+	fmt.Println("Im here")
+	
+	
 	data := auditlogsPlugin.lastLogEvent
 
 	evtBytes, err := ioutil.ReadAll(evt.Reader())
 	if err != nil {
 		return err
 	}
+
 
 	err = json.Unmarshal(evtBytes, &data)
 	if err != nil {
@@ -190,8 +193,12 @@ func (auditlogsPlugin *Plugin) Extract(req sdk.ExtractRequest, evt sdk.EventRead
 
 	switch req.Field() {
 
-	case "auditlogs.principal":
-		req.SetValue(data.ProtoPayload.AuthenticationInfo.PrincipalEmail) 
+	case "al.principal":
+		req.SetValue(data.ProtoPayload.AuthenticationInfo.PrincipalEmail)
+	case "gcp.service.name":
+		req.SetValue(data.ProtoPayload.ServiceName) 
+	case "gcp.method.name":
+		req.SetValue(data.ProtoPayload.MethodName) 
 	default:
 		return fmt.Errorf("no known field: %s", req.Field())
 	}

@@ -7,7 +7,7 @@ rules_file:
 plugins:
   - name: auditlogs
     library_path: /usr/share/falco/plugins/libauditlogs.so
-    init_config: '{"path": "/**/falcoplugin/gcp_audits.json"}'
+    init_config: '{"path": "/home/sherlock/Desktop/falcoplugin/gcp_audits.json"}'
 
 load_plugins: [auditlogs]
 
