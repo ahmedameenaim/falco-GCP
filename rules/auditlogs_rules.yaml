@@ -10,12 +10,15 @@
 
 - macro: is_gcs_service
   condition: al.service.name="storage.googleapis.com"
+
+- macro: is_pubsub_service
+  condition: al.service.name="pubsub.googleapis.com"
   
 - rule: GCP Bucket deleted
   desc: Detect deletion of a GCS bucket.
   condition: is_gcs_service and al.method.name="storage.buckets.delete"
   output: A GCS bucket has been deleted by user=%al.principal
-  priority: DEBUG
+  priority: NOTICE
   source: auditlogs
   tags: [GCP, buckets, mitre_data_destruction]
 
@@ -23,9 +26,26 @@
   desc: Detect when permissions have changed on a GCS Bucket.
   condition: is_gcs_service and al.method.name="storage.setIamPermissions"
   output: A GCS bucket Iam policy has been changed by user=%al.principal
-  priority: DEBUG
+  priority: NOTICE
   source: auditlogs
   tags: [GCP, buckets, compliance]
+
+
+- rule: GCP Pub/Sub topic deleted
+  desc: Detect when a GCP Pub/Sub Subscribtion has been deleted. This could stop audit logs from being sent to Datadog.
+  condition: is_pubsub_service and al.method.name="google.pubsub.v1.Publisher.DeleteTopic"
+  output: A GCS bucket Iam policy has been changed by user=%al.principal
+  priority: NOTICE
+  source: auditlogs
+  tags: [GCP, Pub/Sub, TA0005-defense-evasion, T1562-impair-defenses]
+
+- rule: GCP Pub/Sub Subscriber modified
+  desc: Detect when a GCP Pub/Sub Subscribtion has been deleted. This could stop audit logs from being sent to Datadog.
+  condition: is_pubsub_service and (al.method.name="google.pubsub.v1.Subscriber.UpdateSubscription" or al.method.name="google.pubsub.v1.Subscriber.DeleteSubscription")
+  output: A GCS bucket Iam policy has been changed by user=%al.principal
+  priority: NOTICE
+  source: auditlogs
+  tags: [GCP, Pub/Sub, TA0005-defense-evasion, T1562-impair-defenses]
 
 
 

@@ -156,10 +156,7 @@ func (auditlogsPlugin *Plugin) Fields() []sdk.FieldEntry {
 
 
 func (auditlogsPlugin *Plugin) Extract(req sdk.ExtractRequest, evt sdk.EventReader) error {
-	
-	fmt.Printf("%+v\n", req)
-	fmt.Println("Im here 3")
-	
+		
 	data := auditlogsPlugin.lastLogEvent
 
 	evtBytes, err := ioutil.ReadAll(evt.Reader())
