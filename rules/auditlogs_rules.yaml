@@ -13,6 +13,61 @@
 
 - macro: is_pubsub_service
   condition: al.service.name="pubsub.googleapis.com"
+
+- macro: is_compute_service
+  condition: al.service.name="compute.googleapis.com"
+
+- macro: is_cloudsql_service
+  condition: al.service.name="sqladmin.googleapis.com"
+
+- rule: GCP Cloud SQL database user modified
+  desc: Detect when a Cloud SQL DB user has been modified.
+  condition: is_cloudsql_service and al.method.name="cloudsql.users.update"
+  output: A GCS bucket has been deleted by user=%al.principal
+  priority: NOTICE
+  source: auditlogs
+  tags: [GCP, cloudsql, compliance]
+
+- rule: GCP Cloud SQL database backup deleted
+  desc: Detect when a Cloud SQL DB backup has been deleted.
+  condition: is_cloudsql_service and al.method.name="cloudsql.backupRuns.delete"
+  output: A Cloud SQL DB backup has been deleted by user=%al.principal
+  priority: NOTICE
+  source: auditlogs
+  tags: [GCP, cloudsql, impact, T1490-inhibit-system-recovery]
+
+
+- rule: GCP Cloud SQL database instance data exported
+  desc: Detect when a Cloud SQL DB instance data to cloud storage bucket.
+  condition: is_cloudsql_service and al.method.name="cloudsql.instances.export"
+  output: A Cloud SQL DB instance data to cloud storage bucket by user=%al.principal
+  priority: NOTICE
+  source: auditlogs
+  tags: [GCP, cloudsql, data-exfiltration, T1567-exfiltration-to-Cloud-Storage]
+
+- rule: GCP Cloud SQL database instance deleted
+  desc: Detect when a Cloud SQL DB instance has been deleted.
+  condition: is_cloudsql_service and al.method.name="cloudsql.instances.delete"
+  output: A Cloud SQL DB instance has been deleted by user=%al.principal
+  priority: NOTICE
+  source: auditlogs
+  tags: [GCP, cloudsql, impact, T1485-data-destruction]
+
+- rule: GCP Cloud SQL database instance modified or created
+  desc: Detect when a Cloud SQL DB instance has been modified or created.
+  condition: is_cloudsql_service and (al.method.name="cloudsql.instances.update" or al.method.name="cloudsql.instances.create" or al.method.name="cloudsql.instances.patch")
+  output: A Cloud SQL DB instance has been modified or created by user=%al.principal
+  priority: NOTICE
+  source: auditlogs
+  tags: [GCP, cloudsql, compliance]
+
+- rule: GCP Bucket enumerated
+  desc: Detect deletion of a GCS bucket.
+  condition: is_gcs_service and al.method.name="storage.buckets.list"
+  output: GCS buckets has been listed to user=%al.principal
+  priority: NOTICE
+  source: auditlogs
+  tags: [GCP, buckets, TA0007-discovery, T1083-file-and-directory-discovery]
   
 - rule: GCP Bucket deleted
   desc: Detect deletion of a GCS bucket.
@@ -21,6 +76,14 @@
   priority: NOTICE
   source: auditlogs
   tags: [GCP, buckets, mitre_data_destruction]
+
+- rule: GCP Bucket updated
+  desc: Detect when an administrative change to a GCS Bucket has been made.
+  condition: is_gcs_service and al.method.name="storage.buckets.update"
+  output: A GCS bucket has been updated by user=%al.principal
+  priority: NOTICE
+  source: auditlogs
+  tags: [GCP, buckets, compliance]
 
 - rule: GCP Bucket permissions modified
   desc: Detect when permissions have changed on a GCS Bucket.
@@ -34,7 +97,7 @@
 - rule: GCP Pub/Sub topic deleted
   desc: Detect when a GCP Pub/Sub Subscribtion has been deleted. This could stop audit logs from being sent to Datadog.
   condition: is_pubsub_service and al.method.name="google.pubsub.v1.Publisher.DeleteTopic"
-  output: A GCS bucket Iam policy has been changed by user=%al.principal
+  output: A GCP Pub/Sub topic has been deleted by user=%al.principal
   priority: NOTICE
   source: auditlogs
   tags: [GCP, Pub/Sub, TA0005-defense-evasion, T1562-impair-defenses]
@@ -42,10 +105,19 @@
 - rule: GCP Pub/Sub Subscriber modified
   desc: Detect when a GCP Pub/Sub Subscribtion has been deleted. This could stop audit logs from being sent to Datadog.
   condition: is_pubsub_service and (al.method.name="google.pubsub.v1.Subscriber.UpdateSubscription" or al.method.name="google.pubsub.v1.Subscriber.DeleteSubscription")
-  output: A GCS bucket Iam policy has been changed by user=%al.principal
+  output: A GCP Pub/Sub Subscribtion has been deleted by user=%al.principal
   priority: NOTICE
   source: auditlogs
   tags: [GCP, Pub/Sub, TA0005-defense-evasion, T1562-impair-defenses]
+
+
+- rule: GCP GCE Firewall rule modified
+  desc: Detect when a firewall rule is created, modified or deleted.
+  condition: is_compute_service and (al.method.name="compute.firewalls.delete" or al.method.name="compute.firewalls.patch" or al.method.name="compute.firewalls.insert")
+  output: A GCP GCE Firewall rule modified by user=%al.principal
+  priority: NOTICE
+  source: auditlogs
+  tags: [GCP, Firewall, TA0005-defense-evasion, T1562-impair-defenses]
 
 
 
