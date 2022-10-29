@@ -80,7 +80,7 @@
 - rule: GCP Bucket updated
   desc: Detect when an administrative change to a GCS Bucket has been made.
   condition: is_gcs_service and al.method.name="storage.buckets.update"
-  output: A GCS bucket has been updated by user=%al.principal
+  output: A GCS bucket has been updated by user=%al.principal callerip=%al.callerip authorizationMeta=%al.authorization useragent=%al.useragent service=%al.service.name method=%al.method.name
   priority: NOTICE
   source: auditlogs
   tags: [GCP, buckets, compliance]

@@ -22,7 +22,7 @@ import (
 	"io/ioutil"
 	"log"
 	"context"
-	"time"
+	// "time"
 
 	"github.com/alecthomas/jsonschema"
 	"github.com/falcosecurity/plugin-sdk-go/pkg/sdk"
@@ -48,14 +48,23 @@ type LogEvent struct {
         } `json:"authenticationInfo"`
 
         RequestMetadata struct {
-            CallerIp string `json: "callerIp"`
-        } `json: "requestMetadata"`
+            CallerIp  string `json:"callerIp"`
+            UserAgent string `json:"callerSuppliedUserAgent"`
+        } `json:"requestMetadata"`
 
-        ServiceName string `json: "serviceName"`
-        MethodName string `json: "methodName"`
+		AuthorizationInfo []struct {
+
+            Resource   string `json:"resource"`
+            Permission string `json:"permission"`
+            Granted    bool   `json:"granted"`
+
+        } `json:"authorizationInfo"`
+
+        ServiceName string `json:"serviceName"`
+        MethodName  string `json:"methodName"`
+		TimeStamp   uint64 `json:"timestamp"`
     
-    
-    } `json: "protoPayload"`
+    } `json:"protoPayload"`
 
 }
 
@@ -126,8 +135,6 @@ func (p *Plugin) Open(params string) (source.Instance, error) {
 			log.Fatal("Error when opening file: ", err)
 		}
 
-		evt.SetTimestamp(uint64(time.Now().UnixNano()))
-
 		// Write the event data
 		n, err := evt.Writer().Write(contents)
 
@@ -149,8 +156,12 @@ func (p *Plugin) Open(params string) (source.Instance, error) {
 func (auditlogsPlugin *Plugin) Fields() []sdk.FieldEntry {
 	return []sdk.FieldEntry{
 		{Type: "string", Name: "al.principal", Desc: "GCP principal email who committed the action"},
+		{Type: "string", Name: "al.callerip", Desc: "GCP principal caller IP"},
+		{Type: "string", Name: "al.useragent", Desc: "GCP principal caller useragent"},
 		{Type: "string", Name: "al.service.name", Desc: "GCP API service name"},
 		{Type: "string", Name: "al.method.name", Desc: "GCP API service  method executed"},
+		{Type: "string", Name: "al.authorization", Desc: "GCP authorization information"},
+
 	}
 }
 
@@ -172,14 +183,21 @@ func (auditlogsPlugin *Plugin) Extract(req sdk.ExtractRequest, evt sdk.EventRead
 
 	auditlogsPlugin.lastLogEvent = data
 
+
 	switch req.Field() {
 
 	case "al.principal":
 		req.SetValue(data.ProtoPayload.AuthenticationInfo.PrincipalEmail)
+	case "al.callerip":
+		req.SetValue(data.ProtoPayload.RequestMetadata.CallerIp)
+	case "al.useragent":
+		req.SetValue(data.ProtoPayload.RequestMetadata.UserAgent)
 	case "al.service.name":
 		req.SetValue(data.ProtoPayload.ServiceName) 
 	case "al.method.name":
-		req.SetValue(data.ProtoPayload.MethodName) 
+		req.SetValue(data.ProtoPayload.MethodName)
+	case "al.authorization":  // glitch here
+		req.SetValue(data.ProtoPayload.AuthorizationInfo)  
 	default:
 		return fmt.Errorf("no known field: %s", req.Field())
 	}
