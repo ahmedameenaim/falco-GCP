@@ -53,18 +53,26 @@ type LogEvent struct {
         } `json:"requestMetadata"`
 
 		AuthorizationInfo []struct {
-
             Resource   string `json:"resource"`
             Permission string `json:"permission"`
-            Granted    bool   `json:"granted"`
 
         } `json:"authorizationInfo"`
 
-        ServiceName string `json:"serviceName"`
-        MethodName  string `json:"methodName"`
-		TimeStamp   uint64 `json:"timestamp"`
-    
-    } `json:"protoPayload"`
+        ServiceName  string `json:"serviceName"`
+        MethodName   string `json:"methodName"`
+		TimeStamp    uint64 `json:"timestamp"`
+        ResourceName string `json:"resourceName"`
+		ResourceLocation struct {
+			CurrentLocations []string `json:"currentLocations"`
+		} `json:resourceLocation`
+		
+	
+	} `json:"protoPayload"`
+
+	Resource struct {
+        Type   string `json:"type"`
+        Labels map[string]string `json:"labels"`
+    } `json:"resource"`
 
 }
 
@@ -145,10 +153,7 @@ func (p *Plugin) Open(params string) (source.Instance, error) {
 		}
 		
 		return err
-
 	}
-
-
 
 	return source.NewPullInstance(pull)
 }
@@ -160,7 +165,24 @@ func (auditlogsPlugin *Plugin) Fields() []sdk.FieldEntry {
 		{Type: "string", Name: "al.useragent", Desc: "GCP principal caller useragent"},
 		{Type: "string", Name: "al.service.name", Desc: "GCP API service name"},
 		{Type: "string", Name: "al.method.name", Desc: "GCP API service  method executed"},
-		{Type: "string", Name: "al.authorization", Desc: "GCP authorization information"},
+		{Type: "string", Name: "al.authorization.resources", Desc: "GCP authorization information affected resource", IsList: true, Arg: sdk.FieldEntryArg{
+			IsRequired: false,
+			IsIndex:    true,
+			},
+		},
+		{Type: "string", Name: "al.authorization.permissions", Desc: "GCP authorization information granted permission", IsList: true, Arg: sdk.FieldEntryArg{
+			IsRequired: false,
+			IsIndex:    true,
+			},
+		},
+
+		{Type: "string", Name: "al.resource.locations", Desc: "GCP resource locations zone", IsList: true, Arg: sdk.FieldEntryArg{
+			IsRequired: false,
+			IsIndex:    true,
+			},
+		},
+
+		{Type: "string", Name: "al.meta", Desc: "GCP resource metadata"},
 
 	}
 }
@@ -196,8 +218,30 @@ func (auditlogsPlugin *Plugin) Extract(req sdk.ExtractRequest, evt sdk.EventRead
 		req.SetValue(data.ProtoPayload.ServiceName) 
 	case "al.method.name":
 		req.SetValue(data.ProtoPayload.MethodName)
-	case "al.authorization":  // glitch here
-		req.SetValue(data.ProtoPayload.AuthorizationInfo)  
+	case "al.authorization.resources":
+		resources := []string{}
+		for _, i := range data.ProtoPayload.AuthorizationInfo {
+			resources =	append(resources, i.Resource)
+		}
+		req.SetValue(resources)  
+	case "al.authorization.permissions":
+		permissions := []string{}
+		for _, i := range data.ProtoPayload.AuthorizationInfo {
+			permissions = append(permissions, i.Permission)
+		}
+		req.SetValue(permissions)
+	case "al.resource.locations":
+		locations := []string{}
+		for _, i := range data.ProtoPayload.ResourceLocation.CurrentLocations {
+			locations = append(locations, i)
+		}
+		req.SetValue(locations)
+	case "al.meta":
+		var meta string
+		for key, value := range data.Resource.Labels {
+			meta += key + ":" + value + " "
+		}
+		req.SetValue(meta)
 	default:
 		return fmt.Errorf("no known field: %s", req.Field())
 	}
