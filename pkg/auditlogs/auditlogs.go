@@ -78,8 +78,7 @@ type LogEvent struct {
 
 
 type PluginConfig struct {
-	// This reflects potential internal state for the plugin. In
-	auditLogsFilePath string `json:"path" jsonschema:"title=Sample jitter,description=A random amount added"`
+	auditLogsFilePath string `json:"path" 		jsonschema:"title=Sample jitter,description=A random amount added"`
 }
 
 type Plugin struct {
@@ -118,11 +117,19 @@ func (auditlogsPlugin *Plugin) InitSchema() *sdk.SchemaInfo {
 	return nil
 }
 
-func (auditlogsPlugin *Plugin) Init(cfg string) error {
-	// initialize state
-	auditlogsPlugin.config.auditLogsFilePath = "/home/sherlock/Desktop/falcoplugin/gcp_audits.json"
 
-	err := json.Unmarshal([]byte(cfg), &auditlogsPlugin)
+
+func (p *PluginConfig) Reset() {
+	p.auditLogsFilePath = ""
+}
+
+// initialize state
+func (auditlogsPlugin *Plugin) Init(cfg string) error {
+	
+	auditlogsPlugin.config.Reset() // I want to read configuration from falco.yaml not direct from the source code
+	// auditlogsPlugin.config.auditLogsFilePath = "/home/sherlock/Desktop/falcoplugin/gcp_audits.json"
+
+	err := json.Unmarshal([]byte(cfg), &auditlogsPlugin.config)
 
 	if err != nil {
 		return err
