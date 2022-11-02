@@ -20,7 +20,7 @@ import (
 	"github.com/falcosecurity/plugin-sdk-go/pkg/sdk/plugins"
 	"github.com/falcosecurity/plugin-sdk-go/pkg/sdk/plugins/extractor"
 	"github.com/falcosecurity/plugin-sdk-go/pkg/sdk/plugins/source"
-	"falcoplugin/test/pkg/auditlogs"
+	"falcoplugin/pkg/auditlogs"
 )
 
 func init() {

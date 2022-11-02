@@ -1,4 +1,4 @@
-module falcoplugin/test
+module falcoplugin
 
 go 1.17
 
