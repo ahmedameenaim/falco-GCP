@@ -3,3 +3,4 @@ wait.json
 gcp_audits.json
 sensitive.txt
 draft.txt
+falco.yaml

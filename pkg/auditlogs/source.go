@@ -1,37 +1,67 @@
 package auditlogs
 
 import (
-	"github.com/falcosecurity/plugin-sdk-go/pkg/sdk"
-	"github.com/falcosecurity/plugin-sdk-go/pkg/sdk/plugins/source"
-    "fmt"
-	"io/ioutil"
 	"context"
-	"log"
+	"fmt"
+	"io/ioutil"
+	"time"
+
+	"cloud.google.com/go/pubsub"
+	"github.com/falcosecurity/plugin-sdk-go/pkg/sdk"
 )
 
+func (auditlogsPlugin *Plugin) pullMsgsSync(ctx context.Context, projectID, subID string) (chan []byte, chan error) {
+	project_id := projectID
+	sub_id := subID
 
-func (p *Plugin) Open(params string) (source.Instance, error) {
+	client, err := pubsub.NewClient(ctx, project_id)
 
-	pull := func(ctx context.Context, evt sdk.EventWriter) error {
-
-		contents, err := ioutil.ReadFile(p.Config.auditLogsFilePath)
-
-		if err != nil {
-			log.Fatal("Error when opening file: ", err)
-		}
-
-		// Write the event data
-		n, err := evt.Writer().Write(contents)
-
-		if err != nil {
-			return err
-		} else if n < len(contents) {
-			return fmt.Errorf("auditlogs message too long: %d, but %d were written", len(contents), n)
-		}
-		
-		return err
+	if err != nil {
+		fmt.Printf("pubsub.NewClient: %v", err)
 	}
 
-	return source.NewPullInstance(pull)
+	sub := client.Subscription(sub_id)
 
+	sub.ReceiveSettings.Synchronous = true
+	sub.ReceiveSettings.MaxOutstandingMessages = 10
+
+	eventC := make(chan []byte)
+	errC := make(chan error)
+
+	go func() {
+
+		defer close(eventC)
+		defer close(errC)
+
+		for {
+
+			err = sub.Receive(ctx, func(_ context.Context, msg *pubsub.Message) {
+				eventC <- msg.Data
+				msg.Ack()
+			})
+
+			if err != nil {
+				errC <- err
+				fmt.Printf("error is : %v", err)
+				return
+			}
+
+		}
+
+	}()
+
+	time.Sleep(9 * time.Second)
+	return eventC, errC
+
+}
+
+func (auditlogsPlugin *Plugin) String(evt sdk.EventReader) (string, error) {
+
+	evtBytes, err := ioutil.ReadAll(evt.Reader())
+	if err != nil {
+		return "", err
+	}
+	evtStr := string(evtBytes)
+
+	return fmt.Sprintf("%v", evtStr), nil
 }

@@ -2,23 +2,19 @@ package auditlogs
 
 import "github.com/falcosecurity/plugin-sdk-go/pkg/sdk/plugins"
 
-
 type Plugin struct {
 	plugins.BasePlugin
-	Config 				PluginConfig
+	Config PluginConfig
 
-
-	lastLogEvent 		LogEvent
-	
+	lastLogEvent LogEvent
 }
 
-
 type PluginConfig struct {
-	// auditLogsFilePath string
-	auditLogsFilePath string  `json:"path" jsonschema:"title=path`
-
+	AuditLogsFilePath string `json:"path" jsonschema:"title=path"`
+	SubscriptionID    string `json:"sub_id" jsonschema:"title=sub_id"`
+	ProjectID         string `json:"project_id" jsonschema:"title=project_id"`
 }
 
 func (auditlogsPlugin *PluginConfig) Reset() {
-	
+
 }

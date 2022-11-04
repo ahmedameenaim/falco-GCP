@@ -20,6 +20,9 @@
 - macro: is_cloudsql_service
   condition: al.service.name="sqladmin.googleapis.com"
 
+- macro: is_k8s_service
+  condition: al.service.name="k8s.io"
+
 - rule: GCP Cloud SQL database user modified
   desc: Detect when a Cloud SQL DB user has been modified.
   condition: is_cloudsql_service and al.method.name="cloudsql.users.update"
@@ -118,6 +121,14 @@
   priority: NOTICE
   source: auditlogs
   tags: [GCP, Firewall, TA0005-defense-evasion, T1562-impair-defenses]
+
+- rule: GCP Pod exec initiated
+  desc: Detect when a principal execute commands on containers.
+  condition: is_k8s_service and al.method.name="io.k8s.core.v1.pods.exec.create"
+  output: An access granted for principal user=%al.principal callerip=%al.callerip resourceMeta=%al.meta authorizationResourceMeta=%al.authorization.resources authorizationPermissionMeta=%al.authorization.permissions useragent=%al.useragent service=%al.service.name method=%al.method.name zones=%al.resource.locations
+  priority: NOTICE
+  source: auditlogs
+  tags: [GCP, Pod, compliance]
 
 
 

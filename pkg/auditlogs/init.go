@@ -1,11 +1,11 @@
 package auditlogs
 
 import (
+	"encoding/json"
+
 	"github.com/alecthomas/jsonschema"
 	"github.com/falcosecurity/plugin-sdk-go/pkg/sdk"
-	"encoding/json"
 )
-
 
 func (auditlogsPlugin *Plugin) InitSchema() *sdk.SchemaInfo {
 	reflector := jsonschema.Reflector{
@@ -20,11 +20,8 @@ func (auditlogsPlugin *Plugin) InitSchema() *sdk.SchemaInfo {
 	return nil
 }
 
-
 // initialize state
 func (auditlogsPlugin *Plugin) Init(cfg string) error {
-	// auditlogsPlugin.Config.Reset() // I want to read configuration from falco.yaml not direct from the source code
-	auditlogsPlugin.Config.auditLogsFilePath = "/home/sherlock/Desktop/falcoplugin/gcp_audits.json"
 	err := json.Unmarshal([]byte(cfg), &auditlogsPlugin.Config)
 
 	if err != nil {

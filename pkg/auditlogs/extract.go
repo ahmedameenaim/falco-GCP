@@ -32,6 +32,8 @@ func (auditlogsPlugin *Plugin) Fields() []sdk.FieldEntry {
 		},
 
 		{Type: "string", Name: "al.meta", Desc: "GCP resource metadata"},
+		{Type: "string", Name: "al.resource.type", Desc: "GCP API service type"},
+
 
 	}
 }
@@ -93,6 +95,8 @@ func (auditlogsPlugin *Plugin) Extract(req sdk.ExtractRequest, evt sdk.EventRead
 			meta += key + ":" + value + " "
 		}
 		req.SetValue(meta)
+	case "al.resource.type":
+		req.SetValue(data.Resource.Type)
 	default:
 		return fmt.Errorf("no known field: %s", req.Field())
 	}
