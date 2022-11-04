@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"time"
 
 	"cloud.google.com/go/pubsub"
 	"github.com/falcosecurity/plugin-sdk-go/pkg/sdk"
@@ -50,7 +49,6 @@ func (auditlogsPlugin *Plugin) pullMsgsSync(ctx context.Context, projectID, subI
 
 	}()
 
-	time.Sleep(9 * time.Second)
 	return eventC, errC
 
 }
