@@ -54,13 +54,22 @@ type LogEvent struct {
 			Permission string `json:"permission"`
 		} `json:"authorizationInfo"`
 
-		ServiceName      string `json:"serviceName"`
-		MethodName       string `json:"methodName"`
-		TimeStamp        uint64 `json:"timestamp"`
-		ResourceName     string `json:"resourceName"`
+		ServiceName  string `json:"serviceName"`
+		MethodName   string `json:"methodName"`
+		TimeStamp    uint64 `json:"timestamp"`
+		ResourceName string `json:"resourceName"`
+		ServiceData  struct {
+			PolicyDelta struct {
+				BindingDeltas []struct {
+					Action string `json:"action"`
+					Role   string `json:"role"`
+					Member string `json:"member"`
+				} `json:"bindingDeltas"`
+			} `json:"policyDelta"`
+		} `json:"serviceData,omitempty"`
 		ResourceLocation struct {
 			CurrentLocations []string `json:"currentLocations"`
-		} `json:resourceLocation`
+		} `json:"resourceLocation"`
 	} `json:"protoPayload"`
 
 	Resource struct {
@@ -107,24 +116,24 @@ func (p *Plugin) Open(topic string) (source.Instance, error) {
 
 // func (p *Plugin) Open(topic string) (source.Instance, error) {
 
-// pull := func(ctx context.Context, evt sdk.EventWriter) error {
+// 	pull := func(ctx context.Context, evt sdk.EventWriter) error {
 
-// 	contents, err := ioutil.ReadFile(p.Config.AuditLogsFilePath)
+// 		contents, err := ioutil.ReadFile(p.Config.AuditLogsFilePath)
 
-// 	if err != nil {
-// 		log.Fatal("Error when opening file: ", err)
-// 	}
+// 		if err != nil {
+// 			log.Fatal("Error when opening file: ", err)
+// 		}
 
-// 	// Write the event data
-// 	n, err := evt.Writer().Write(contents)
+// 		// Write the event data
+// 		n, err := evt.Writer().Write(contents)
 
-// 	if err != nil {
+// 		if err != nil {
+// 			return err
+// 		} else if n < len(contents) {
+// 			return fmt.Errorf("auditlogs message too long: %d, but %d were written", len(contents), n)
+// 		}
+
 // 		return err
-// 	} else if n < len(contents) {
-// 		return fmt.Errorf("auditlogs message too long: %d, but %d were written", len(contents), n)
 // 	}
-
-// 	return err
-// }
-// return source.NewPullInstance(pull)
+// 	return source.NewPullInstance(pull)
 // }

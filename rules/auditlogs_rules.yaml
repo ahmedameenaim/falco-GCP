@@ -7,6 +7,8 @@
     version: 0.3.0
 
 
+- macro: is_binded_delta_to_public
+  condition: al.bind.members in ("allAuthenticatedUsers", "allUsers")
 
 - macro: is_gcs_service
   condition: al.service.name="storage.googleapis.com"
@@ -64,6 +66,24 @@
   source: auditlogs
   tags: [GCP, cloudsql, compliance]
 
+
+- rule: GCP Bucket configured to be public
+  desc: Detect when access on a GCP Bucket granted to the public internet.
+  condition: is_gcs_service and al.authorization.permissions intersects ("storage.buckets.setIamPolicy") and al.bind.actions intersects("ADD") and is_binded_delta_to_public
+  output: A GCP bucket access granted to be public by user=%al.principal %al.authorization.permissions %al.bind.members %al.resource.locations
+  priority: CRITICAL
+  source: auditlogs
+  tags: [GCP, buckets, compliance]
+
+
+- rule: GCP Bucket objects configured to be public
+  desc: Detect when access on a GCP Bucket objects granted to the public internet.
+  condition: is_gcs_service and al.authorization.permissions intersects ("storage.objects.setIamPolicy") and al.bind.actions intersects("ADD") and is_binded_delta_to_public
+  output: A GCP bucket objects access granted to be public by user=%al.principal %al.authorization.permissions %al.bind.members
+  priority: CRITICAL
+  source: auditlogs
+  tags: [GCP, buckets, objects, compliance]
+
 - rule: GCP Bucket enumerated
   desc: Detect deletion of a GCS bucket.
   condition: is_gcs_service and al.method.name="storage.buckets.list"
@@ -91,11 +111,10 @@
 - rule: GCP Bucket permissions modified
   desc: Detect when permissions have changed on a GCS Bucket.
   condition: is_gcs_service and al.method.name="storage.setIamPermissions"
-  output: A GCS bucket Iam policy has been changed by user=%al.principal
+  output: A GCS bucket Iam policy has been changed by user=%al.principal %al.authorization.permissions
   priority: NOTICE
   source: auditlogs
   tags: [GCP, buckets, compliance]
-
 
 - rule: GCP Pub/Sub topic deleted
   desc: Detect when a GCP Pub/Sub Subscribtion has been deleted. This could stop audit logs from being sent to Datadog.
