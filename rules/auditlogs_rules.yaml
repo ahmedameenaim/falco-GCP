@@ -19,6 +19,12 @@
 - macro: is_compute_service
   condition: al.service.name="compute.googleapis.com"
 
+- macro: is_iam_service
+  condition: al.service.name="iam.googleapis.com"
+
+- macro: is_logging_service
+  condition: al.service.name="logging.googleapis.com"
+
 - macro: is_cloudsql_service
   condition: al.service.name="sqladmin.googleapis.com"
 
@@ -116,6 +122,114 @@
   source: auditlogs
   tags: [GCP, buckets, compliance]
 
+
+
+
+- rule: GCP GCE Firewall rule modified
+  desc: Detect when a firewall rule is created, modified or deleted.
+  condition: is_compute_service and (al.method.name="v1.compute.firewalls.delete" or al.method.name="v1.compute.firewalls.patch" or al.method.name="v1.compute.firewalls.insert")
+  output: A GCP GCE Firewall rule modified by user=%al.principal
+  priority: NOTICE
+  source: auditlogs
+  tags: [GCP, Firewall, TA0005-defense-evasion, T1562-impair-defenses]
+
+
+
+- rule: GCP WAF Network policy modified
+  desc: Detect when a WAF Network policy is created, modified or deleted.
+  condition: is_compute_service and (al.method.name="v1.compute.securityPolicies.delete" or al.method.name="v1.compute.securityPolicies.insert" or al.method.name="v1.compute.securityPolicies.patch")
+  output: A GCP WAF network policy or waf rule modified by user=%al.principal
+  priority: NOTICE
+  source: auditlogs
+  tags: [GCP, WAF, CloudArmor, TA0005-defense-evasion, T1562-impair-defenses]
+
+
+- rule: GCP WAF rule modified
+  desc: Detect when a WAF rule is created, modified or deleted.
+  condition: is_compute_service and (al.method.name="v1.compute.securityPolicies.removeRule" or al.method.name="v1.compute.securityPolicies.addRule" or al.method.name="v1.compute.securityPolicies.patchRule")
+  output: A GCP WAF network policy or waf rule modified by user=%al.principal
+  priority: NOTICE
+  source: auditlogs
+  tags: [GCP, WAF, CloudArmor, TA0005-defense-evasion, T1562-impair-defenses]
+
+
+- rule: GCP CloudArmor edge security service modified
+  desc: Detect when a CloudArmor edge security created, modified or deleted.
+  condition: is_compute_service and (al.method.name="compute.networkEdgeSecurityServices.delete" or al.method.name="compute.networkEdgeSecurityServices.create" or al.method.name="compute.networkEdgeSecurityServices.update")
+  output: A GCP CloudArmor edge security modified by user=%al.principal
+  priority: NOTICE
+  source: auditlogs
+  tags: [GCP, WAF, CloudArmor, TA0005-defense-evasion, T1562-impair-defenses]
+
+
+- rule: GCP backendService deleted
+  desc: Detect when a backendService deleted.
+  condition: is_compute_service and (al.method.name="compute.backendServices.delete")
+  output: A GCP backendService deleted by user=%al.principal
+  priority: NOTICE
+  source: auditlogs
+  tags: [GCP, backendService, T1498-DOS]
+
+
+- rule: GCP IAM serviceAccount created
+  desc: Detect when a serviceAccount created.
+  condition: is_iam_service and (al.method.name="google.iam.admin.v1.IAM.CreateServiceAccount)
+  output: A GCP serviceAccount created by user=%al.principal
+  priority: NOTICE
+  source: auditlogs
+  tags: [GCP, IAM, 	abuse-elevation-control-mechanism]
+
+
+- rule: GCP IAM serviceAccount deleted
+  desc: Detect when a serviceAccount deleted.
+  condition: is_iam_service and (al.method.name="google.iam.admin.v1.IAM.DeleteServiceAccount")
+  output: A GCP serviceAccount delete by user=%al.principal
+  priority: NOTICE
+  source: auditlogs
+  tags: [GCP, IAM, 	abuse-elevation-control-mechanism]
+
+- rule: GCP IAM serviceAccount modified
+  desc: Detect when a serviceAccount modified.
+  condition: is_iam_service and (al.method.name="google.iam.admin.v1.IAM.UpdateServiceAccount")
+  output: A GCP serviceAccount delete by user=%al.principal
+  priority: NOTICE
+  source: auditlogs
+  tags: [GCP, IAM, 	abuse-elevation-control-mechanism]
+
+
+- rule: GCP IAM serviceAccount key created
+  desc: Detect when a serviceAccount key created.
+  condition: is_iam_service and (al.method.name="google.iam.admin.v1.IAM.CreateServiceAccountKey")
+  output: A GCP serviceAccount delete by user=%al.principal
+  priority: NOTICE
+  source: auditlogs
+  tags: [GCP, IAM, 	abuse-elevation-control-mechanism]
+
+
+- rule: GCP IAM serviceAccount key deleted
+  desc: Detect when a serviceAccount key created.
+  condition: is_iam_service and (al.method.name="google.iam.admin.v1.IAM.DeleteServiceAccountKey")
+  output: A GCP serviceAccount delete by user=%al.principal
+  priority: NOTICE
+  source: auditlogs
+  tags: [GCP, IAM, 	abuse-elevation-control-mechanism]
+
+- rule: GCP IAM custom role created
+  desc: Detect when a IAM custom role created.
+  condition: is_iam_service and (al.method.name="google.iam.admin.v1.IAM.CreateRole")
+  output: A GCP IAM custom role created by user=%al.principal
+  priority: NOTICE
+  source: auditlogs
+  tags: [GCP, IAM, 	abuse-elevation-control-mechanism]
+
+- rule: GCP IAM custom role modified
+  desc: Detect when a IAM custom role modified.
+  condition: is_iam_service and (al.method.name="google.iam.admin.v1.IAM.UpdateRole")
+  output: A GCP IAM custom role modified by user=%al.principal
+  priority: NOTICE
+  source: auditlogs
+  tags: [GCP, IAM, 	abuse-elevation-control-mechanism]
+
 - rule: GCP Pub/Sub topic deleted
   desc: Detect when a GCP Pub/Sub Subscribtion has been deleted. This could stop audit logs from being sent to Datadog.
   condition: is_pubsub_service and al.method.name="google.pubsub.v1.Publisher.DeleteTopic"
@@ -133,21 +247,33 @@
   tags: [GCP, Pub/Sub, TA0005-defense-evasion, T1562-impair-defenses]
 
 
-- rule: GCP GCE Firewall rule modified
-  desc: Detect when a firewall rule is created, modified or deleted.
-  condition: is_compute_service and (al.method.name="compute.firewalls.delete" or al.method.name="compute.firewalls.patch" or al.method.name="compute.firewalls.insert")
-  output: A GCP GCE Firewall rule modified by user=%al.principal
+- rule: GCP logging sink modified
+  desc: Detect when a GCP Pub/Sub Subscribtion has been deleted. This could stop audit logs from being sent to Datadog.
+  condition: is_logging_service and (al.method.name="google.logging.v2.ConfigServiceV2.UpdateSink" or al.method.name="google.logging.v2.ConfigServiceV2.DeleteSink")
+  output: A GCP Pub/Sub Subscribtion has been deleted by user=%al.principal
   priority: NOTICE
   source: auditlogs
-  tags: [GCP, Firewall, TA0005-defense-evasion, T1562-impair-defenses]
+  tags: [GCP, Sink, TA0005-defense-evasion, T1562-impair-defenses]
+
+
+
 
 - rule: GCP Pod exec initiated
   desc: Detect when a principal execute commands on containers.
   condition: is_k8s_service and al.method.name="io.k8s.core.v1.pods.exec.create"
-  output: An access granted for principal user=%al.principal callerip=%al.callerip resourceMeta=%al.meta authorizationResourceMeta=%al.authorization.resources authorizationPermissionMeta=%al.authorization.permissions useragent=%al.useragent service=%al.service.name method=%al.method.name zones=%al.resource.locations
+  output: An access granted for principal user=%al.principal callerip=%al.callerip test=%al.resource.type resourceMeta=%al.meta authorizationResourceMeta=%al.authorization.resources authorizationPermissionMeta=%al.authorization.permissions useragent=%al.useragent service=%al.service.name method=%al.method.name zones=%al.resource.locations
   priority: NOTICE
   source: auditlogs
-  tags: [GCP, Pod, compliance]
+  tags: [GCP, GKE, Pod, compliance]
+
+- rule: GCP GKE secrets viewed
+  desc: Detect when a GKE secret object being watched.
+  condition: is_k8s_service and al.method.name="io.k8s.core.v1.secrets.watch"
+  output: A secret object watched by principal user=%al.principal callerip=%al.callerip test=%al.resource.type resourceMeta=%al.meta authorizationResourceMeta=%al.authorization.resources authorizationPermissionMeta=%al.authorization.permissions useragent=%al.useragent service=%al.service.name method=%al.method.name zones=%al.resource.locations
+  priority: NOTICE
+  source: auditlogs
+  tags: [GCP, GKE, Secret, compliance]
+
 
 
 

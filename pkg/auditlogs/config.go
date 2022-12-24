@@ -6,7 +6,8 @@ type Plugin struct {
 	plugins.BasePlugin
 	Config PluginConfig
 
-	lastLogEvent LogEvent
+	lastLogEvent 	 LogEvent
+	lastEventNum     uint64
 }
 
 type PluginConfig struct {

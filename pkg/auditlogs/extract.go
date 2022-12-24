@@ -53,17 +53,24 @@ func (auditlogsPlugin *Plugin) Extract(req sdk.ExtractRequest, evt sdk.EventRead
 
 	data := auditlogsPlugin.lastLogEvent
 
-	evtBytes, err := ioutil.ReadAll(evt.Reader())
-	if err != nil {
-		return err
-	}
 
-	err = json.Unmarshal(evtBytes, &data)
-	if err != nil {
-		return err
-	}
+	if evt.EventNum() != auditlogsPlugin.lastEventNum {
 
-	auditlogsPlugin.lastLogEvent = data
+
+		evtBytes, err := ioutil.ReadAll(evt.Reader())
+		if err != nil {
+			return err
+		}
+	
+		err = json.Unmarshal(evtBytes, &data)
+		if err != nil {
+			return err
+		}
+	
+		auditlogsPlugin.lastLogEvent = data
+		auditlogsPlugin.lastEventNum = evt.EventNum()
+
+	}
 
 	switch req.Field() {
 
