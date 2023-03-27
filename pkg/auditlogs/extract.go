@@ -34,14 +34,9 @@ func (auditlogsPlugin *Plugin) Fields() []sdk.FieldEntry {
 
 		{Type: "string", Name: "al.meta", Desc: "GCP resource metadata"},
 		{Type: "string", Name: "al.resource.type", Desc: "GCP API service type"},
+		{Type: "string", Name: "al.policyDelta", Desc: "GCP API service type"},
 
-		{Type: "string", Name: "al.bind.actions", Desc: "GCP API service type", IsList: true, Arg: sdk.FieldEntryArg{
-			IsRequired: false,
-			IsIndex:    true,
-		},
-		},
-
-		{Type: "string", Name: "al.bind.members", Desc: "GCP API service type", IsList: true, Arg: sdk.FieldEntryArg{
+		{Type: "string", Name: "al.request", Desc: "GCP API service type", IsList: true, Arg: sdk.FieldEntryArg{
 			IsRequired: false,
 			IsIndex:    true,
 		},
@@ -49,14 +44,95 @@ func (auditlogsPlugin *Plugin) Fields() []sdk.FieldEntry {
 	}
 }
 
+// func (auditlogsPlugin *Plugin) Extract(req sdk.ExtractRequest, evt sdk.EventReader) error {
+
+// 	data := auditlogsPlugin.lastLogEvent
+
+
+// 	if evt.EventNum() != auditlogsPlugin.lastEventNum {
+
+
+// 		evtBytes, err := ioutil.ReadAll(evt.Reader())
+// 		if err != nil {
+// 			return err
+// 		}
+	
+// 		err = json.Unmarshal(evtBytes, &data)
+// 		if err != nil {
+// 			return err
+// 		}
+	
+// 		auditlogsPlugin.lastLogEvent = data
+// 		auditlogsPlugin.lastEventNum = evt.EventNum()
+
+// 	}
+
+// 	switch req.Field() {
+
+// 	case "al.principal":
+// 		req.SetValue(data.ProtoPayload.AuthenticationInfo.PrincipalEmail)
+// 	case "al.callerip":
+// 		req.SetValue(data.ProtoPayload.RequestMetadata.CallerIp)
+// 	case "al.useragent":
+// 		req.SetValue(data.ProtoPayload.RequestMetadata.UserAgent)
+// 	case "al.service.name":
+// 		req.SetValue(data.ProtoPayload.ServiceName)
+// 	case "al.method.name":
+// 		req.SetValue(data.ProtoPayload.MethodName)
+// 	case "al.authorization.resources":
+// 		resources := []string{}
+// 		for _, i := range data.ProtoPayload.AuthorizationInfo {
+// 			resources = append(resources, i.Resource)
+// 		}
+// 		req.SetValue(resources)
+// 	case "al.authorization.permissions":
+// 		permissions := []string{}
+// 		for _, i := range data.ProtoPayload.AuthorizationInfo {
+// 			permissions = append(permissions, i.Permission)
+// 		}
+// 		req.SetValue(permissions)
+// 	case "al.resource.locations":
+// 		locations := []string{}
+
+// 		locations = append(locations, data.ProtoPayload.ResourceLocation.CurrentLocations...)
+// 		req.SetValue(locations)
+// 	case "al.meta":
+// 		var meta string
+// 		for key, value := range data.Resource.Labels {
+// 			meta += key + ":" + value + " "
+// 		}
+// 		req.SetValue(meta)
+// 	case "al.resource.type":
+// 		req.SetValue(data.Resource.Type)
+// 	case "al.bind.actions":
+// 		var actions []string
+// 		bindingData := data.ProtoPayload.ServiceData.PolicyDelta.BindingDeltas
+// 		for index := range bindingData {
+// 			actions = append(actions, bindingData[index].Action)
+// 		}
+// 		req.SetValue(actions)
+// 	case "al.bind.members":
+// 		var members []string
+// 		bindingData := data.ProtoPayload.ServiceData.PolicyDelta.BindingDeltas
+// 		for index := range bindingData {
+// 			members = append(members, bindingData[index].Member)
+// 		}
+// 		req.SetValue(members)
+// 	default:
+// 		return fmt.Errorf("no known field: %s", req.Field())
+// 	}
+
+// 	return nil
+// }
+
+
 func (auditlogsPlugin *Plugin) Extract(req sdk.ExtractRequest, evt sdk.EventReader) error {
 
 	data := auditlogsPlugin.lastLogEvent
 
 
 	if evt.EventNum() != auditlogsPlugin.lastEventNum {
-
-
+		
 		evtBytes, err := ioutil.ReadAll(evt.Reader())
 		if err != nil {
 			return err
@@ -66,7 +142,7 @@ func (auditlogsPlugin *Plugin) Extract(req sdk.ExtractRequest, evt sdk.EventRead
 		if err != nil {
 			return err
 		}
-	
+
 		auditlogsPlugin.lastLogEvent = data
 		auditlogsPlugin.lastEventNum = evt.EventNum()
 
@@ -84,23 +160,38 @@ func (auditlogsPlugin *Plugin) Extract(req sdk.ExtractRequest, evt sdk.EventRead
 		req.SetValue(data.ProtoPayload.ServiceName)
 	case "al.method.name":
 		req.SetValue(data.ProtoPayload.MethodName)
+	case "al.request":
+		requestElements := data.ProtoPayload.Request
+
+		var stringRequest []string
+
+		b, err := json.Marshal(requestElements)
+		if err != nil {
+			return nil
+		}
+
+		stringRequest = append(stringRequest, string(b))
+
+		req.SetValue(stringRequest)
+
 	case "al.authorization.resources":
-		resources := []string{}
-		for _, i := range data.ProtoPayload.AuthorizationInfo {
-			resources = append(resources, i.Resource)
+		resources := make([]string, 0, len(data.ProtoPayload.AuthorizationInfo))
+		for _, info := range data.ProtoPayload.AuthorizationInfo {
+			resources = append(resources, info.Resource)
 		}
 		req.SetValue(resources)
 	case "al.authorization.permissions":
-		permissions := []string{}
-		for _, i := range data.ProtoPayload.AuthorizationInfo {
-			permissions = append(permissions, i.Permission)
+		permissions := make([]string, 0, len(data.ProtoPayload.AuthorizationInfo))
+		for _, info := range data.ProtoPayload.AuthorizationInfo {
+			permissions = append(permissions, info.Permission)
 		}
 		req.SetValue(permissions)
 	case "al.resource.locations":
-		locations := []string{}
+		// locations := []string{}
 
-		locations = append(locations, data.ProtoPayload.ResourceLocation.CurrentLocations...)
-		req.SetValue(locations)
+		// locations = append(locations, data.ProtoPayload.ResourceLocation.CurrentLocations...)
+		// req.SetValue(locations)
+		req.SetValue(data.ProtoPayload.ResourceLocation.CurrentLocations)
 	case "al.meta":
 		var meta string
 		for key, value := range data.Resource.Labels {
@@ -109,20 +200,23 @@ func (auditlogsPlugin *Plugin) Extract(req sdk.ExtractRequest, evt sdk.EventRead
 		req.SetValue(meta)
 	case "al.resource.type":
 		req.SetValue(data.Resource.Type)
-	case "al.bind.actions":
-		var actions []string
-		bindingData := data.ProtoPayload.ServiceData.PolicyDelta.BindingDeltas
-		for index := range bindingData {
-			actions = append(actions, bindingData[index].Action)
+	case "al.policyDelta":
+		if (data.Resource.Type == "gcs_bucket") {
+			bindingData := data.ProtoPayload.ServiceData.PolicyDelta.BindingDeltas
+			deltaString, err := json.Marshal(bindingData)
+			if err != nil {
+				return err
+			}
+			req.SetValue(string(deltaString))
+		} else {
+			bindingData := data.ProtoPayload.MetaData.DatasetChange.BindingDeltas
+			deltaString, err := json.Marshal(bindingData)
+			if err != nil {
+				return err
+			}	
+			req.SetValue(string(deltaString))
 		}
-		req.SetValue(actions)
-	case "al.bind.members":
-		var members []string
-		bindingData := data.ProtoPayload.ServiceData.PolicyDelta.BindingDeltas
-		for index := range bindingData {
-			members = append(members, bindingData[index].Member)
-		}
-		req.SetValue(members)
+		
 	default:
 		return fmt.Errorf("no known field: %s", req.Field())
 	}

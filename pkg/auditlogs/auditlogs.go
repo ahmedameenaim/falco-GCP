@@ -18,10 +18,10 @@ package auditlogs
 
 import (
 
-	// "io/ioutil"
-	// "fmt"
-	// "github.com/falcosecurity/plugin-sdk-go/pkg/sdk"
-
+	"io/ioutil"
+	"fmt"
+	"github.com/falcosecurity/plugin-sdk-go/pkg/sdk"
+	"encoding/json"
 	"context"
 
 	"github.com/falcosecurity/plugin-sdk-go/pkg/sdk/plugins"
@@ -56,8 +56,10 @@ type LogEvent struct {
 
 		ServiceName  string `json:"serviceName"`
 		MethodName   string `json:"methodName"`
+		Request   	 json.RawMessage `json:"request,omitempty"`
 		TimeStamp    uint64 `json:"timestamp"`
 		ResourceName string `json:"resourceName"`
+		//This field would be deprecated, metadata field will be the alternative
 		ServiceData  struct {
 			PolicyDelta struct {
 				BindingDeltas []struct {
@@ -67,11 +69,20 @@ type LogEvent struct {
 				} `json:"bindingDeltas"`
 			} `json:"policyDelta"`
 		} `json:"serviceData,omitempty"`
+		MetaData struct {
+			DatasetChange struct {
+				BindingDeltas []struct {
+					Action string `json:"action"`
+					Role   string `json:"role"`
+					Member string `json:"member"`
+				} `json:"bindingDeltas"`
+			}`json:"datasetChange"`
+		}`json:"metadata,omitempty"`
 		ResourceLocation struct {
 			CurrentLocations []string `json:"currentLocations"`
 		} `json:"resourceLocation"`
 	} `json:"protoPayload"`
-
+	
 	Resource struct {
 		Type   string            `json:"type"`
 		Labels map[string]string `json:"labels"`
@@ -89,51 +100,52 @@ func (auditlogsPlugin *Plugin) Info() *plugins.Info {
 	}
 }
 
-func (p *Plugin) Open(topic string) (source.Instance, error) {
-
-	ctx, cancel := context.WithCancel(context.Background())
-
-	eventsC, errC := p.pullMsgsSync(ctx, p.Config.ProjectID, p.Config.SubscriptionID)
-	pushEventC := make(chan source.PushEvent)
-
-	go func() {
-		defer close(eventsC)
-		for {
-			select {
-			case messages := <-eventsC:
-				pushEventC <- source.PushEvent{Data: messages}
-
-			case e := <-errC:
-				pushEventC <- source.PushEvent{Err: e}
-				return
-			}
-		}
-	}()
-
-	return source.NewPushInstance(pushEventC, source.WithInstanceClose(cancel))
-
-}
-
 // func (p *Plugin) Open(topic string) (source.Instance, error) {
 
-// 	pull := func(ctx context.Context, evt sdk.EventWriter) error {
+// 	ctx, cancel := context.WithCancel(context.Background())
 
-// 		contents, err := ioutil.ReadFile(p.Config.AuditLogsFilePath)
+// 	eventsC, errC := p.pullMsgsSync(ctx, p.Config.ProjectID, p.Config.SubscriptionID)
+// 	pushEventC := make(chan source.PushEvent)
 
-// 		if err != nil {
-// 			log.Fatal("Error when opening file: ", err)
+// 	go func() {
+// 		defer close(eventsC)
+// 		for {
+// 			select {
+// 			case messages := <-eventsC:
+// 				pushEventC <- source.PushEvent{Data: messages}
+
+// 			case e := <-errC:
+// 				pushEventC <- source.PushEvent{Err: e}
+// 				return
+// 			}
 // 		}
+// 	}()
 
-// 		// Write the event data
-// 		n, err := evt.Writer().Write(contents)
+// 	return source.NewPushInstance(pushEventC, source.WithInstanceClose(cancel))
 
-// 		if err != nil {
-// 			return err
-// 		} else if n < len(contents) {
-// 			return fmt.Errorf("auditlogs message too long: %d, but %d were written", len(contents), n)
-// 		}
-
-// 		return err
-// 	}
-// 	return source.NewPullInstance(pull)
 // }
+
+func (p *Plugin) Open(topic string) (source.Instance, error) {
+
+	pull := func(ctx context.Context, evt sdk.EventWriter) error {
+
+
+		contents, err := ioutil.ReadFile(p.Config.AuditLogsFilePath)
+
+		if err != nil {
+			fmt.Errorf("Error when opening file: ", err)
+		}
+
+		// Write the event data
+		n, err := evt.Writer().Write(contents)
+
+		if err != nil {
+			return err
+		} else if n < len(contents) {
+			return fmt.Errorf("auditlogs message too long: %d, but %d were written", len(contents), n)
+		}
+
+		return err
+	}
+	return source.NewPullInstance(pull)
+}

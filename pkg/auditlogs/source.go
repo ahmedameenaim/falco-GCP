@@ -7,13 +7,14 @@ import (
 
 	"cloud.google.com/go/pubsub"
 	"github.com/falcosecurity/plugin-sdk-go/pkg/sdk"
+	"google.golang.org/api/option"
 )
 
 func (auditlogsPlugin *Plugin) pullMsgsSync(ctx context.Context, projectID, subID string) (chan []byte, chan error) {
 	project_id := projectID
 	sub_id := subID
 
-	client, err := pubsub.NewClient(ctx, project_id)
+	client, err := pubsub.NewClient(ctx, project_id,  option.WithCredentialsFile("/home/sherlock/.config/gcloud/application_default_credentials.json"))
 
 	if err != nil {
 		fmt.Printf("pubsub.NewClient: %v", err)
@@ -21,8 +22,9 @@ func (auditlogsPlugin *Plugin) pullMsgsSync(ctx context.Context, projectID, subI
 
 	sub := client.Subscription(sub_id)
 
-	sub.ReceiveSettings.Synchronous = true
-	sub.ReceiveSettings.MaxOutstandingMessages = 10
+	sub.ReceiveSettings.MaxOutstandingMessages = auditlogsPlugin.Config.MaxOutstandingMessages
+	sub.ReceiveSettings.NumGoroutines = auditlogsPlugin.Config.NumGoroutines
+
 
 	eventC := make(chan []byte)
 	errC := make(chan error)
@@ -52,6 +54,7 @@ func (auditlogsPlugin *Plugin) pullMsgsSync(ctx context.Context, projectID, subI
 	return eventC, errC
 
 }
+
 
 func (auditlogsPlugin *Plugin) String(evt sdk.EventReader) (string, error) {
 
