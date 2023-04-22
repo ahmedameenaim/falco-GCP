@@ -14,11 +14,9 @@ func (auditlogsPlugin *Plugin) Fields() []sdk.FieldEntry {
 		{Type: "string", Name: "al.principal.useragent", Desc: "GCP principal caller useragent"},
 		{Type: "string", Name: "al.principal.authorinfo", Desc: "GCP authorization information affected resource"},
 		{Type: "string", Name: "al.service.name", Desc: "GCP API service name"},
+		{Type: "string", Name: "al.service.policyDelta", Desc: "GCP service resource access policy"},
 		{Type: "string", Name: "al.method.name", Desc: "GCP API service  method executed"},
-
-		{Type: "string", Name: "al.service.policyDelta", Desc: "GCP API service type"},
-
-		{Type: "string", Name: "al.request", Desc: "GCP API service type"},
+		{Type: "string", Name: "al.request", Desc: "GCP API raw request"},
 	}
 }
 
@@ -30,7 +28,6 @@ func (auditlogsPlugin *Plugin) Extract(req sdk.ExtractRequest, evt sdk.EventRead
 		if err != nil {
 			return err
 		}
-	
 		// For this plugin, events are always strings
 		evtString := string(evtBytes)
 
@@ -91,8 +88,5 @@ func (auditlogsPlugin *Plugin) Extract(req sdk.ExtractRequest, evt sdk.EventRead
 	default:
 		return fmt.Errorf("no known field: %s", req.Field())
 	}
-
-	
 	return nil
-
 }
