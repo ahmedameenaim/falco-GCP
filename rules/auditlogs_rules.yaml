@@ -6,11 +6,17 @@
   - name: json
     version: 0.6.0
 
+- macro: never_true
+  condition: (evt.num=0)
+
+- macro: always_true
+  condition: (evt.num>=0)
+
 
 - macro: is_binded_delta_to_public
   condition: > 
-    al.policyDelta contains "ADD" and (al.policyDelta contains "allAuthenticatedUsers"
-    or al.policyDelta contains "allUsers")
+    al.service.policyDelta contains "ADD" and (al.service.policyDelta contains "allAuthenticatedUsers"
+    or al.service.policyDelta contains "allUsers")
 
 - macro: is_bigquery_service
   condition: al.service.name="bigquery.googleapis.com"
@@ -45,12 +51,43 @@
 - macro: is_k8s_service
   condition: al.service.name="k8s.io"
 
+- macro: pod
+  condition: json.value[/protoPayload/request/kind]="Pod"
+
+- macro: service
+  condition: json.value[/protoPayload/request/kind]="Service"
+
+- macro: configmap
+  condition: json.value[/protoPayload/request/kind]="ConfigMap"
+
+- macro: namespace
+  condition: json.value[/protoPayload/request/kind]="Namespace"
+
+- macro: serviceaccount
+  condition: json.value[/protoPayload/request/kind]="ServiceAccount"
+  
+- macro: role
+  condition: json.value[/protoPayload/request/kind]="Role"
+
+- macro: clusterrole
+  condition: json.value[/protoPayload/request/kind]="ClusterRole"
+
+- macro: clusterrolebinding
+  condition: json.value[/protoPayload/request/kind]="ClusterRoleBinding"
+
+- macro: deployment
+  condition: json.value[/protoPayload/request/kind]="Deployment"
+
+- macro: service
+  condition: json.value[/protoPayload/request/kind]="Service"
+
+
 - rule: GCP Cloud SQL database user modified or deleted
   desc: Detect when a Cloud SQL DB user has been modified or deleted.
   condition:  > 
     is_cloudsql_service and (al.method.name="cloudsql.users.update"
     or al.method.name="cloudsql.users.delete")
-  output: A CloudSQL DB user has been updated by user=%al.principal
+  output: A CloudSQL DB user has been updated by user=%al.principal.email
   priority: NOTICE
   source: auditlogs
   tags: [GCP, cloudsql, compliance]
@@ -58,7 +95,7 @@
 - rule: GCP Cloud SQL database backup deleted
   desc: Detect when a Cloud SQL DB backup has been deleted.
   condition: is_cloudsql_service and al.method.name="cloudsql.backupRuns.delete"
-  output: A Cloud SQL DB backup has been deleted by user=%al.principal
+  output: A Cloud SQL DB backup has been deleted by user=%al.principal.email
   priority: NOTICE
   source: auditlogs
   tags: [GCP, cloudsql, impact, T1490-inhibit-system-recovery]
@@ -67,7 +104,7 @@
 - rule: GCP Cloud SQL database instance data exported
   desc: Detect when a Cloud SQL DB instance data to cloud storage bucket.
   condition: is_cloudsql_service and al.method.name="cloudsql.instances.export"
-  output: A Cloud SQL DB instance data exported to a cloud storage bucket by user=%al.principal request=%al.request
+  output: A Cloud SQL DB instance data exported to a cloud storage bucket by user=%al.principal.email
   priority: NOTICE
   source: auditlogs
   tags: [GCP, cloudsql, data-exfiltration, T1567-exfiltration-to-Cloud-Storage]
@@ -75,7 +112,7 @@
 - rule: GCP Cloud SQL database instance deleted
   desc: Detect when a Cloud SQL DB instance has been deleted.
   condition: is_cloudsql_service and al.method.name="cloudsql.instances.delete"
-  output: A Cloud SQL DB instance has been deleted by user=%al.principal
+  output: A Cloud SQL DB instance has been deleted by user=%al.principal.email
   priority: NOTICE
   source: auditlogs
   tags: [GCP, cloudsql, impact, T1485-data-destruction]
@@ -86,15 +123,17 @@
     is_cloudsql_service and (al.method.name="cloudsql.instances.update" 
     or al.method.name="cloudsql.instances.create" 
     or al.method.name="cloudsql.instances.patch")
-  output: A Cloud SQL DB instance has been modified or created by user=%al.principal
+  output: A Cloud SQL DB instance has been modified or created by user=%al.principal.email
   priority: NOTICE
   source: auditlogs
   tags: [GCP, cloudsql, compliance]
 
 - rule: GCP Bucket configured to be public
   desc: Detect when access on a GCP Bucket granted to the public internet.
-  condition: is_gcs_service and al.authorization.permissions intersects ("storage.buckets.setIamPolicy") and is_binded_delta_to_public 
-  output: A GCP bucket access granted to be public by user=%al.principal %al.authorization.permissions %al.resource.locations
+  condition: is_gcs_service and is_binded_delta_to_public 
+  output: > 
+    A GCP bucket access granted to be public by user=%al.principal.email userIP=%al.principal.ip userAgent=%al.principal.useragent bindedDelta=%al.service.policyDelta
+    authorizationInfo=%al.principal.authorinfo  
   priority: CRITICAL
   source: auditlogs
   tags: [GCP, buckets, compliance]
@@ -102,10 +141,10 @@
 - rule: GCP Bucket objects configured to be public
   desc: Detect when access on a GCP Bucket objects granted to the public internet.
   condition: > 
-    is_gcs_service and al.authorization.permissions intersects ("storage.objects.setIamPolicy") 
+    is_gcs_service 
     and al.method.name="storage.objects.update" 
     and is_binded_delta_to_public
-  output: A GCP bucket objects access granted to be public by user=%al.principal %al.authorization.permissions
+  output: A GCP bucket objects access granted to be public by user=%al.principal.email 
   priority: CRITICAL
   source: auditlogs
   tags: [GCP, buckets, objects, compliance]
@@ -113,7 +152,7 @@
 - rule: GCP Bucket enumerated
   desc: Detect deletion of a GCS bucket.
   condition: is_gcs_service and al.method.name="storage.buckets.list"
-  output: GCS buckets has been listed to user=%al.principal
+  output: GCS buckets has been listed to user=%al.principal.email
   priority: NOTICE
   source: auditlogs
   tags: [GCP, buckets, TA0007-discovery, T1083-file-and-directory-discovery]
@@ -121,7 +160,7 @@
 - rule: GCP Bucket deleted
   desc: Detect deletion of a GCS bucket.
   condition: is_gcs_service and al.method.name="storage.buckets.delete"
-  output: A GCS bucket has been deleted by user=%al.principal
+  output: A GCS bucket has been deleted by user=%al.principal.email
   priority: NOTICE
   source: auditlogs
   tags: [GCP, buckets, mitre_data_destruction]
@@ -129,7 +168,7 @@
 - rule: GCP Bucket updated
   desc: Detect when an administrative change to a GCS Bucket has been made.
   condition: is_gcs_service and al.method.name="storage.buckets.update"
-  output: A GCS bucket has been updated by user=%al.principal callerip=%al.callerip resourceMeta=%al.meta authorizationResourceMeta=%al.authorization.resources authorizationPermissionMeta=%al.authorization.permissions useragent=%al.useragent service=%al.service.name method=%al.method.name zones=%al.resource.locations
+  output: A GCS bucket has been updated by user=%al.principal.email callerip=%al.principal.ip useragent=%al.principal.useragent service=%al.service.name method=%al.method.name zones=
   priority: NOTICE
   source: auditlogs
   tags: [GCP, buckets, compliance]
@@ -137,7 +176,7 @@
 - rule: GCP Bucket permissions modified
   desc: Detect when permissions have changed on a GCS Bucket.
   condition: is_gcs_service and al.method.name="storage.setIamPermissions"
-  output: A GCS bucket Iam policy has been changed by user=%al.principal %al.authorization.permissions
+  output: A GCS bucket Iam policy has been changed by user=%al.principal.email 
   priority: NOTICE
   source: auditlogs
   tags: [GCP, buckets, compliance]
@@ -145,10 +184,10 @@
 - rule: GCP BigQuery Dataset access configured to be public
   desc: Detect when access on a BigQuery Dataset access granted to the public internet.
   condition: > 
-    is_bigquery_service and al.authorization.permissions intersects ("bigquery.datasets.update") 
+    is_bigquery_service
     and al.method.name="google.iam.v1.IAMPolicy.SetIamPolicy" 
     and is_binded_delta_to_public
-  output: A GCP Bigquery dataset access granted to be public by user=%al.principal %al.authorization.permissions
+  output: A GCP Bigquery dataset access granted to be public by user=%al.principal.email 
   priority: CRITICAL
   source: auditlogs
   tags: [GCP, bigquery, datasets, compliance]
@@ -162,7 +201,7 @@
     or al.method.name contains "compute.instances.setIamPolicy"
     or al.method.name contains "compute.instances.updateAccessConfig"
     or al.method.name contains "compute.instances.updateNetworkInterface")
-  output: A GCP VM has ben stopped by user=%al.principal resourceType=%al.resource.type metadata=al.meta
+  output: A GCP VM has ben stopped by user=%al.principal.email metadata=
   priority: NOTICE
   source: auditlogs
   tags: [GCP, VM, TA0005-defense-evasion, T1562-impair-defenses]
@@ -171,7 +210,7 @@
 - rule: GCP VM stopped
   desc: Detect when a virtual machine is stopped.
   condition: is_compute_service and (al.method.name contains "compute.instances.stop")
-  output: A GCP VM has ben stopped by user=%al.principal resourceType=%al.resource.type metadata=al.meta
+  output: A GCP VM has ben stopped by user=%al.principal.email metadata=
   priority: NOTICE
   source: auditlogs
   tags: [GCP, VM, TA0005-defense-evasion, T1562-impair-defenses]
@@ -183,7 +222,7 @@
     is_compute_service and (al.method.name contains "compute.firewalls.delete" 
     or al.method.name contains "compute.firewalls.patch" 
     or al.method.name contains "compute.firewalls.insert")
-  output: A GCP GCE Firewall rule modified by user=%al.principal resourceType=%al.resource.type metadata=al.meta
+  output: A GCP GCE Firewall rule modified by user=%al.principal.email  metadata=
   priority: NOTICE
   source: auditlogs
   tags: [GCP, Firewall, TA0005-defense-evasion, T1562-impair-defenses]
@@ -195,7 +234,7 @@
     is_compute_service and (al.method.name contains "compute.securityPolicies.delete" 
     or al.method.name contains "compute.securityPolicies.insert" 
     or al.method.name contains "compute.securityPolicies.patch")
-  output: A GCP WAF network policy or waf rule modified by user=%al.principal metadata=%al.meta resourceType=%al.resource.type 
+  output: A GCP WAF network policy or waf rule modified by user=%al.principal.email  
   priority: NOTICE
   source: auditlogs
   tags: [GCP, WAF, CloudArmor, TA0005-defense-evasion, T1562-impair-defenses]
@@ -207,7 +246,7 @@
     is_compute_service and (al.method.name contains "compute.securityPolicies.removeRule" 
     or al.method.name contains "compute.securityPolicies.addRule" 
     or al.method.name contains "compute.securityPolicies.patchRule")
-  output: A GCP WAF network policy or waf rule modified by user=%al.principal metadata=%al.meta resourceType=%al.resource.type 
+  output: A GCP WAF network policy or waf rule modified by user=%al.principal.email  
   priority: NOTICE
   source: auditlogs
   tags: [GCP, WAF, CloudArmor, TA0005-defense-evasion, T1562-impair-defenses]
@@ -219,7 +258,7 @@
     is_compute_service and (al.method.name contains "compute.networkEdgeSecurityServices.delete" 
     or al.method.name contains "compute.networkEdgeSecurityServices.create" 
     or al.method.name contains "compute.networkEdgeSecurityServices.update")
-  output: A GCP CloudArmor edge security modified by user=%al.principal
+  output: A GCP CloudArmor edge security modified by user=%al.principal.email
   priority: NOTICE
   source: auditlogs
   tags: [GCP, WAF, CloudArmor, TA0005-defense-evasion, T1562-impair-defenses]
@@ -228,7 +267,7 @@
 - rule: GCP backendService deleted
   desc: Detect when a backendService deleted.
   condition: is_compute_service and (al.method.name contains "compute.backendServices.delete")
-  output: A GCP backendService deleted by user=%al.principal
+  output: A GCP backendService deleted by user=%al.principal.email
   priority: NOTICE
   source: auditlogs
   tags: [GCP, backendService, T1498-DOS]
@@ -237,7 +276,7 @@
 - rule: GCP IAM serviceAccount created
   desc: Detect when a serviceAccount created.
   condition: is_iam_service and (al.method.name="google.iam.admin.v1.IAM.CreateServiceAccount")
-  output: A GCP serviceAccount created by user=%al.principal
+  output: A GCP serviceAccount created by user=%al.principal.email
   priority: NOTICE
   source: auditlogs
   tags: [GCP, IAM, 	abuse-elevation-control-mechanism]
@@ -246,7 +285,7 @@
 - rule: GCP IAM serviceAccount deleted
   desc: Detect when a serviceAccount deleted.
   condition: is_iam_service and (al.method.name="google.iam.admin.v1.IAM.DeleteServiceAccount")
-  output: A GCP serviceAccount delete by user=%al.principal
+  output: A GCP serviceAccount delete by user=%al.principal.email
   priority: NOTICE
   source: auditlogs
   tags: [GCP, IAM, 	abuse-elevation-control-mechanism]
@@ -254,7 +293,7 @@
 - rule: GCP IAM serviceAccount modified
   desc: Detect when a serviceAccount modified.
   condition: is_iam_service and (al.method.name="google.iam.admin.v1.IAM.UpdateServiceAccount")
-  output: A GCP serviceAccount delete by user=%al.principal
+  output: A GCP serviceAccount delete by user=%al.principal.email
   priority: NOTICE
   source: auditlogs
   tags: [GCP, IAM, 	abuse-elevation-control-mechanism]
@@ -263,7 +302,7 @@
 - rule: GCP IAM serviceAccount key created
   desc: Detect when a serviceAccount key created.
   condition: is_iam_service and (al.method.name="google.iam.admin.v1.IAM.CreateServiceAccountKey")
-  output: A GCP serviceAccount delete by user=%al.principal
+  output: A GCP serviceAccount delete by user=%al.principal.email
   priority: NOTICE
   source: auditlogs
   tags: [GCP, IAM, 	abuse-elevation-control-mechanism]
@@ -272,7 +311,7 @@
 - rule: GCP IAM serviceAccount key deleted
   desc: Detect when a serviceAccount key created.
   condition: is_iam_service and (al.method.name="google.iam.admin.v1.IAM.DeleteServiceAccountKey")
-  output: A GCP serviceAccount delete by user=%al.principal
+  output: A GCP serviceAccount delete by user=%al.principal.email
   priority: NOTICE
   source: auditlogs
   tags: [GCP, IAM, 	abuse-elevation-control-mechanism]
@@ -280,7 +319,7 @@
 - rule: GCP IAM custom role created
   desc: Detect when a IAM custom role created.
   condition: is_iam_service and (al.method.name="google.iam.admin.v1.IAM.CreateRole")
-  output: A GCP IAM custom role created by user=%al.principal
+  output: A GCP IAM custom role created by user=%al.principal.email
   priority: NOTICE
   source: auditlogs
   tags: [GCP, IAM, 	abuse-elevation-control-mechanism]
@@ -288,7 +327,7 @@
 - rule: GCP IAM custom role modified
   desc: Detect when a IAM custom role modified.
   condition: is_iam_service and (al.method.name="google.iam.admin.v1.IAM.UpdateRole")
-  output: A GCP IAM custom role modified by user=%al.principal
+  output: A GCP IAM custom role modified by user=%al.principal.email
   priority: NOTICE
   source: auditlogs
   tags: [GCP, IAM, 	abuse-elevation-control-mechanism]
@@ -296,7 +335,7 @@
 - rule: GCP IAM principle modified
   desc: Detect when a IAM principle policy modified.
   condition: is_crm_service and (al.method.name="SetIamPolicy")
-  output: A GCP IAM custom role modified by user=%al.principal bindingPolicy=%al.policyDelta policies=%al.authorization.permissions
+  output: A GCP IAM custom role modified by user=%al.principal.email bindingPolicy=%al.service.policyDelta policies=
   priority: NOTICE
   source: auditlogs
   tags: [GCP, IAM, 	abuse-elevation-control-mechanism]
@@ -305,7 +344,7 @@
 - rule: GCP cloud function created
   desc: Detect when a cloud function is created.
   condition: is_cloudfunctions_service and (al.method.name="google.cloud.functions.v1.CloudFunctionsService.CreateFunction")
-  output: A GCP cloud function is created by by user=%al.principal
+  output: A GCP cloud function is created by by user=%al.principal.email.email
   priority: NOTICE
   source: auditlogs
   tags: [GCP, CloudFunction, 	abuse-elevation-control-mechanism]
@@ -316,7 +355,7 @@
     is_cloudfunctions_service and (
       al.method.name="google.cloud.functions.v1.CloudFunctionsService.UpdateFunction"
       or al.method.name="google.cloud.functions.v1.CloudFunctionsService.DeleteFunction")
-  output: A GCP cloud function is created by by user=%al.principal
+  output: A GCP cloud function is created by by user=%al.principal.email.email
   priority: NOTICE
   source: auditlogs
   tags: [GCP, CloudFunction, 	abuse-elevation-control-mechanism]
@@ -324,7 +363,7 @@
 - rule: GCP KMS keyring created
   desc: Detect when a KMS keyring is created.
   condition: is_kms_service and al.method.name="CreateKeyRing"
-  output: A GCP KMS key ring is created by by user=%al.principal
+  output: A GCP KMS key ring is created by by user=%al.principal.email.email
   priority: NOTICE
   source: auditlogs
   tags: [GCP, KMS, 	abuse-elevation-control-mechanism]
@@ -332,7 +371,7 @@
 - rule: GCP KMS created
   desc: Detect when a cloud function is created.
   condition: is_kms_service and al.method.name="CreateCryptoKey"
-  output: A GCP KMS is created by by user=%al.principal
+  output: A GCP KMS is created by by user=%al.principal.email.email
   priority: NOTICE
   source: auditlogs
   tags: [GCP, KMS, 	abuse-elevation-control-mechanism]
@@ -343,7 +382,7 @@
     is_kms_service and (
       al.method.name="UpdateCryptoKey"
       or al.method.name="DestroyCryptoKeyVersion")
-  output: A GCP KMS is destructed by by user=%al.principal
+  output: A GCP KMS is destructed by by user=%al.principal.email.email
   priority: NOTICE
   source: auditlogs
   tags: [GCP, KMS, 	abuse-elevation-control-mechanism]
@@ -351,7 +390,7 @@
 - rule: GCP Pub/Sub topic deleted
   desc: Detect when a GCP Pub/Sub Subscribtion has been deleted. This could stop audit logs from being sent to Datadog.
   condition: is_pubsub_service and al.method.name="google.pubsub.v1.Publisher.DeleteTopic"
-  output: A GCP Pub/Sub topic has been deleted by user=%al.principal
+  output: A GCP Pub/Sub topic has been deleted by user=%al.principal.email.email
   priority: NOTICE
   source: auditlogs
   tags: [GCP, Pub/Sub, TA0005-defense-evasion, T1562-impair-defenses]
@@ -361,7 +400,7 @@
   condition: > 
     is_pubsub_service and (al.method.name="google.pubsub.v1.Subscriber.UpdateSubscription" 
     or al.method.name="google.pubsub.v1.Subscriber.DeleteSubscription")
-  output: A GCP Pub/Sub Subscribtion has been deleted by user=%al.principal
+  output: A GCP Pub/Sub Subscribtion has been deleted by user=%al.principal.email.email
   priority: NOTICE
   source: auditlogs
   tags: [GCP, Pub/Sub, TA0005-defense-evasion, T1562-impair-defenses]
@@ -372,27 +411,21 @@
   condition: > 
     is_logging_service and (al.method.name="google.logging.v2.ConfigServiceV2.UpdateSink" 
     or al.method.name="google.logging.v2.ConfigServiceV2.DeleteSink")
-  output: A GCP Pub/Sub Subscribtion has been deleted by user=%al.principal
+  output: A GCP Pub/Sub Subscribtion has been deleted by user=%al.principal.email.email
   priority: NOTICE
   source: auditlogs
   tags: [GCP, Sink, TA0005-defense-evasion, T1562-impair-defenses]
 
 
-- rule: GCP Pod exec initiated
-  desc: Detect when a principal execute commands on containers.
-  condition: is_k8s_service and al.method.name="io.k8s.core.v1.pods.exec.create"
-  output: An access granted for principal user=%al.principal callerip=%al.callerip test=%al.resource.type resourceMeta=%al.meta authorizationResourceMeta=%al.authorization.resources authorizationPermissionMeta=%al.authorization.permissions useragent=%al.useragent service=%al.service.name method=%al.method.name zones=%al.resource.locations
-  priority: NOTICE
-  source: auditlogs
-  tags: [GCP, GKE, Pod, compliance]
 
-- rule: GCP GKE secrets viewed
-  desc: Detect when a GKE secret object being watched.
-  condition: is_k8s_service and al.method.name="io.k8s.core.v1.secrets.watch"
-  output: A secret object watched by principal user=%al.principal callerip=%al.callerip test=%al.resource.type resourceMeta=%al.meta authorizationResourceMeta=%al.authorization.resources authorizationPermissionMeta=%al.authorization.permissions useragent=%al.useragent service=%al.service.name method=%al.method.name zones=%al.resource.locations
-  priority: NOTICE
-  source: auditlogs
-  tags: [GCP, GKE, Secret, compliance]
+
+# - rule: GCP GKE secrets viewed
+#   desc: Detect when a GKE secret object being watched.
+#   condition: is_k8s_service and al.method.name="io.k8s.core.v1.secrets.watch"
+#   output: A secret object watched by principal user=%al.principal.email callerip=%al.principal.ip test=%al.resource.type resourceMeta=% authorizationResourceMeta= authorizationPermissionMeta= useragent=al.principal.useragent service=%al.service.name method=%al.method.name zones=
+#   priority: NOTICE
+#   source: auditlogs
+#   tags: [GCP, GKE, Secret, compliance]
 
 # - rule: GCP GKE role created, updated or deleted
 #   desc: Detect when a GKE role object is created, updated or deleted.
@@ -401,17 +434,515 @@
 #     (al.method.name="io.k8s.authorization.rbac.v1.roles.create"
 #     or al.method.name="io.k8s.authorization.rbac.v1.roles.patch"
 #     or al.method.name="io.k8s.authorization.rbac.v1.roles.delete")
-#   output: A role object created by principal user=%al.principal callerip=%al.callerip test=%al.resource.type resourceMeta=%al.meta authorizationResourceMeta=%al.authorization.resources authorizationPermissionMeta=%al.authorization.permissions useragent=%al.useragent service=%al.service.name method=%al.method.name zones=%al.resource.locations
+#   output: A role object created by principal user=%al.principal.email callerip=%al.principal.ip test=%al.resource.type resourceMeta=% authorizationResourceMeta= authorizationPermissionMeta= useragent=al.principal.useragent service=%al.service.name method=%al.method.name zones=
 #   priority: NOTICE
 #   source: auditlogs
 #   tags: [GCP, GKE, Role, compliance]
 
-- rule: Role With Wildcard Created
-  desc: Detect any attempt to create a Role with wildcard resources or verbs
-  condition: is_k8s_service and al.method.name="io.k8s.authorization.rbac.v1.roles.create"
+# Corresponds to K8s CIS Benchmark 1.7.4
+
+
+- rule: Create Privileged Pod
+  desc: Detect an attempt to start a pod with a privileged container
+  condition: > 
+    is_k8s_service
+    and pod 
+    and al.method.name="io.k8s.core.v1.pods.create"
+    and json.value[/protoPayload/request/spec/containers] contains '"securityContext":{"privileged":true}'
   output: > 
-    Created Role/ClusterRole with wildcard
-    namespace=%json.value[/request/metadata/namespace]
+    Pod started with privileged container (user=NA 
+    pod=%json.value[/protoPayload/request/metadata/name]  
+    resource=%al.method.name
+    ns=%json.value[/protoPayload/request/metadata/namespace]
+    images=%json.value[/protoPayload/request/spec/containers/0/image] , %json.value[/protoPayload/request/spec/containers/1/image]
   priority: WARNING
   source: auditlogs
+  tags: [GCP, GKE, Pod, compliance]
+
+# - macro: sensitive_vol_mount
+#   condition: >
+#     (ka.req.pod.volumes.hostpath intersects (/proc, /var/run/docker.sock, /, /etc, /root, /var/run/crio/crio.sock, /run/containerd/containerd.sock, /home/admin, /var/lib/kubelet, /var/lib/kubelet/pki, /etc/kubernetes, /etc/kubernetes/manifests))
+
+- rule: Create Sensitive Mount Pod
+  desc: >
+    Detect an attempt to start a pod with a volume from a sensitive host directory (i.e. /proc).
+    Exceptions are made for known trusted images.
+  condition: > 
+    is_k8s_service 
+    and pod  
+    and al.method.name="io.k8s.core.v1.pods.create" 
+    and json.value[/protoPayload/request/spec/volumes] contains "hostPath"
+  output: > 
+    Pod started with sensitive mount (user=NA 
+    pod=%json.value[/protoPayload/request/metadata/name] 
+    ns=%json.value[/protoPayload/request/metadata/namespace] 
+    volumes=%json.value[/protoPayload/request/spec/volumes]
+  priority: WARNING
+  source: auditlogs
+  tags: [GCP, GKE, Pod, compliance]
+
+# Corresponds to K8s CIS Benchmark 1.7.4
+- rule: Create HostNetwork Pod
+  desc: Detect an attempt to start a pod using the host network.
+  condition: > 
+    is_k8s_service 
+    and pod 
+    and al.method.name="io.k8s.core.v1.pods.create"  
+    and json.value[/protoPayload/request/spec/hostNetwork]=true
+  output: > 
+    Pod started using host network (user=NA 
+    pod=%json.value[/protoPayload/request/metadata/name] 
+    ns=%json.value[/protoPayload/request/metadata/namespace]
+  priority: WARNING
+  source: auditlogs
+  tags: [GCP, GKE, Pod, compliance]
+
+- rule: Create HostPid Pod
+  desc: Detect an attempt to start a pod using the host pid namespace.
+  condition: > 
+    is_k8s_service 
+    and pod 
+    and al.method.name="io.k8s.core.v1.pods.create"  
+    and json.value[/protoPayload/request/spec/hostPID]=true
+  output: > 
+    Pod started using host pid namespace (user=NA 
+    pod=%json.value[/protoPayload/request/metadata/name] 
+    ns=%json.value[/protoPayload/request/metadata/namespace]
+  priority: WARNING
+  source: auditlogs
+  tags: [GCP, GKE, Pod, compliance]
+
+- rule: Create HostIPC Pod
+  desc: Detect an attempt to start a pod using the host ipc namespace.
+  condition: > 
+    is_k8s_service 
+    and pod 
+    and al.method.name="io.k8s.core.v1.pods.create"  
+    and json.value[/protoPayload/request/spec/hostIPC]=true
+  output: > 
+    Pod started using host ipc namespace (user=NA 
+    pod=%json.value[/protoPayload/request/metadata/name] 
+    ns=%json.value[/protoPayload/request/metadata/namespace]
+  priority: WARNING
+  source: auditlogs
+  tags: [GCP, GKE, Pod, compliance]
+
+- rule: Create NodePort/loadbalancer Service
+  desc: >
+    Detect an attempt to start a service with a NodePort or load balancer service type
+  condition: > 
+    is_k8s_service 
+    and service 
+    and al.method.name="io.k8s.core.v1.services.create" 
+    and (json.value[/protoPayload/request/spec/type]="NodePort" 
+    or json.value[/protoPayload/request/spec/type]="LoadBalancer") 
+  output: > 
+    NodePort/loadbalancer Service Created (user=NA 
+    service=%json.value[/protoPayload/request/metadata/name]
+    ns=%json.value[/protoPayload/request/metadata/namespace]
+    ports=%json.value[/protoPayload/request/spec/ports])
+  priority: WARNING
+  source: auditlogs
+  tags: [GCP, GKE, SVC, compliance]
+
+- list: allowed_public_gke_endpoints
+  items: ["readyz", "livez"]
+
+
+# Corresponds to K8s CIS Benchmark, 1.1.1.
+- rule: Anonymous Request Allowed
+  desc: >
+    Detect any request made by the anonymous user that was allowed
+  condition: > 
+    is_k8s_service 
+    and json.value[/protoPayload/authenticationInfo/principalEmail]="system:anonymous"
+    and json.value[/labels] contains '"authorization.k8s.io/decision":"allow"'
+    and not json.value[/protoPayload/resourceName] in (allowed_public_gke_endpoints) 
+  output: >
+    Request by anonymous user allowed (user=NA 
+    reason=%json.value[/labels]))
+  priority: WARNING
+  source: auditlogs
+  tags: [GCP, GKE, compliance]
+
+- list: allowed_namespaces
+  items: [kube-system, kube-public, default]
+
+- rule: Create Disallowed Namespace
+  desc: Detect any attempt to create a namespace outside of a set of known namespaces
+  condition: > 
+    is_k8s_service 
+    and namespace 
+    and not json.value[/protoPayload/request/metadata/name] in (allowed_namespaces)
+  output: > 
+    Disallowed namespace created (user=NA 
+    ns=%json.value[/protoPayload/request/metadata/name]
+    resource=%json.value[/protoPayload/resourceName])
+  priority: WARNING
+  source: auditlogs
+  tags: [GCP, GKE, namespace, compliance]
+
+
+
+- list: user_trusted_image_list
+  items: []
+
+- list: user_allowed_kube_namespace_image_list
+  items: [user_trusted_image_list]
+
+- list: allowed_kube_namespace_image_list
+  items: [
+    gcr.io/google-containers/prometheus-to-sd,
+    gcr.io/projectcalico-org/node,
+    gke.gcr.io/addon-resizer,
+    gke.gcr.io/heapster,
+    gke.gcr.io/gke-metadata-server,
+    k8s.gcr.io/ip-masq-agent-amd64,
+    k8s.gcr.io/kube-apiserver,
+    registry.k8s.io/ip-masq-agent-amd64,
+    registry.k8s.io/kube-apiserver,
+    gke.gcr.io/kube-proxy,
+    gke.gcr.io/netd-amd64,
+    gke.gcr.io/watcher-daemonset,
+    k8s.gcr.io/addon-resizer,
+    k8s.gcr.io/prometheus-to-sd,
+    k8s.gcr.io/k8s-dns-dnsmasq-nanny-amd64,
+    k8s.gcr.io/k8s-dns-kube-dns-amd64,
+    k8s.gcr.io/k8s-dns-sidecar-amd64,
+    k8s.gcr.io/metrics-server-amd64,
+    registry.k8s.io/addon-resizer,
+    registry.k8s.io/prometheus-to-sd,
+    registry.k8s.io/k8s-dns-dnsmasq-nanny-amd64,
+    registry.k8s.io/k8s-dns-kube-dns-amd64,
+    registry.k8s.io/k8s-dns-sidecar-amd64,
+    registry.k8s.io/metrics-server-amd64,
+    kope/kube-apiserver-healthcheck,
+    k8s_image_list
+  ]
+
+# - macro: allowed_kube_namespace_pods
+#   condition: (ka.req.pod.containers.image.repository in (user_allowed_kube_namespace_image_list) or
+#               ka.req.pod.containers.image.repository in (allowed_kube_namespace_image_list))
+
+
+- list: user_known_sa_list
+  items: []
+
+- list: known_sa_list
+  items: [
+    coredns,
+    coredns-autoscaler,
+    cronjob-controller,
+    daemon-set-controller,
+    deployment-controller,
+    disruption-controller,
+    endpoint-controller,
+    endpointslice-controller,
+    endpointslicemirroring-controller,
+    generic-garbage-collector,
+    horizontal-pod-autoscaler,
+    job-controller,
+    namespace-controller,
+    node-controller,
+    persistent-volume-binder,
+    pod-garbage-collector,
+    pv-protection-controller,
+    pvc-protection-controller,
+    replicaset-controller,
+    resourcequota-controller,
+    root-ca-cert-publisher,
+    service-account-controller,
+    statefulset-controller
+  ]
+
+- macro: trusted_sa
+  condition: (json.value[/protoPayload/request/metadata/name] in (known_sa_list, user_known_sa_list))
+
+# Detect creating a service account in the kube-system/kube-public namespace
+- rule: Service Account Created in Kube Namespace
+  desc: Detect any attempt to create a serviceaccount in the kube-system or kube-public namespaces
+  condition: > 
+    is_k8s_service 
+    and serviceaccount 
+    and al.method.name="io.k8s.core.v1.serviceaccounts.create" 
+    and not json.value[/protoPayload/request/name] in (kube-system, kube-public) 
+    and not trusted_sa
+  output: > 
+    Service account created in kube namespace (user=NA 
+    serviceaccount=%json.value[/protoPayload/request/metadata/name] 
+    ns=%json.value[/protoPayload/request/metadata/namespace]
+    resource=%json.value[/protoPayload/resourceName])
+  priority: WARNING
+  source: auditlogs
+  tags: [GCP, GKE, serviceAccount, compliance]
+
+
+# Detect any attempt to create a ClusterRoleBinding to the cluster-admin user
+# (expand this to any built-in cluster role that does "sensitive" things)
+- rule: Attach to admin/cluster-admin Role
+  desc: Detect any attempt to create a ClusterRoleBinding to the admin/cluster-admin user
+  condition: > 
+    is_k8s_service 
+    and clusterrolebinding
+    and al.method.name="io.k8s.authorization.rbac.v1.clusterrolebindings.create"
+    and json.value[/protoPayload/request/roleRef/name] in (cluster-admin, admin)
+  output: > 
+    Cluster Role Binding to cluster-admin role (user=NA
+    roleNam=%json.value[/protoPayload/request/metadata/name]
+    roleRef=%json.value[/protoPayload/request/roleRef]
+    subject=%json.value[/protoPayload/request/subjects])
+  priority: WARNING
+  source: auditlogs
+  tags: [GCP, GKE, serviceAccount, compliance]
+
+# - rule: Role With Wildcard Created
+#   desc: Detect any attempt to create a Role with wildcard resources or verbs
+#   condition: > 
+#     is_k8s_service 
+#     and (al.method.name="io.k8s.authorization.rbac.v1.roles.create" or al.method.name="io.k8s.authorization.rbac.v1.roles.update") 
+#     and (role or clusterrole)
+#     and (json.value[/protoPayload/request/rules/0/resources] contains "*" or json.value[/protoPayload/request/rules/0/verbs] contains "*")
+#   output: > 
+#     Created Role/ClusterRole with wildcard
+#     methodname=%al.method.name
+#     namespace=%json.value[/protoPayload/request/metadata/namespace]
+#   priority: WARNING
+#   source: auditlogs
+#   tags: [GCP, GKE, Role, compliance]
+
+- macro: writable_verbs
+  condition: >
+    (json.value[/protoPayload/request/rules/0/verbs] intersects (create, update, patch, delete, deletecollection))
+
+- rule: ClusterRole With Write Privileges Created
+  desc: Detect any attempt to create a Role/ClusterRole that can perform write-related actions
+  condition: > 
+    is_k8s_service 
+    and (role or clusterrole) 
+    and (al.method.name="io.k8s.authorization.rbac.v1.roles.create") 
+    and writable_verbs
+  output: > 
+    Created Role/ClusterRole with write privileges (user=NA 
+    role=%json.value[/protoPayload/request/metadata/name] 
+    rules=%json.value[/protoPayload/request/rules]
+    test=%json.value[/protoPayload/request/rules/0/verbs])
+  priority: NOTICE
+  source: auditlogs
   tags: [GCP, GKE, Role, compliance]
+
+- rule: GCP Pod exec initiated
+  desc: Detect when a principal execute commands on containers.
+  condition: is_k8s_service and al.method.name="io.k8s.core.v1.pods.exec.create"
+  output: > 
+    An access granted for principal user=%al.principal.email callerip=%al.principal.ip
+  priority: NOTICE
+  source: auditlogs
+  tags: [GCP, GKE, Pod, compliance]
+
+# The rules below this point are less discriminatory and generally
+# represent a stream of activity for a cluster. If you wish to enable
+# these events, modify the following macro to always_true.
+
+- macro: consider_GKE_activity_events
+  condition: (always_true)
+
+
+- rule: K8s Deployment Created
+  desc: Detect any attempt to create a deployment
+  condition: > 
+    is_k8s_service 
+    and consider_GKE_activity_events 
+    and deployment 
+    and al.method.name="io.k8s.apps.v1.deployments.create"
+  output: > 
+    K8s Deployment Created (user=NA 
+    deployment=%json.value[/protoPayload/request/metadata/name]
+    ns=%json.value[/protoPayload/request/metadata/namespace])
+  priority: INFO
+  source: auditlogs
+  tags: [GCP, GKE, Deployment, compliance]
+
+- rule: K8s Deployment Deleted
+  desc: Detect any attempt to delete a deployment
+  condition: > 
+    is_k8s_service 
+    and consider_GKE_activity_events 
+    and al.method.name="io.k8s.apps.v1.deployments.delete"
+    and json.value[/protoPayload/response/details/kind]="deployments" 
+  output: > 
+    K8s Deployment Created (user=NA 
+    deployment=%json.value[/protoPayload/request/metadata/name]
+    ns=%json.value[/protoPayload/request/metadata/namespace]
+    details=%json.value[/protoPayload/response/details])
+  priority: INFO
+  source: auditlogs
+  tags: [GCP, GKE, deployment, compliance]
+
+- rule: K8s Service Created
+  desc: Detect any attempt to create a service
+  condition: > 
+    is_k8s_service 
+    and consider_GKE_activity_events 
+    and service 
+    and al.method.name="io.k8s.core.v1.services.create"
+  output: > 
+    K8s Service Created (user=NA 
+    service=%json.value[/protoPayload/request/metadata/name] 
+    ns=%json.value[/protoPayload/request/metadata/namespace]
+    ports=%json.value[/protoPayload/request/spec/ports])
+  priority: INFO
+  source: auditlogs
+  tags: [GCP, GKE, service, compliance]
+
+- rule: K8s Service Deleted
+  desc: Detect any attempt to delete a service
+  condition: > 
+    is_k8s_service 
+    and consider_GKE_activity_events 
+    and al.method.name="io.k8s.core.v1.services.delete"
+    and json.value[/protoPayload/response/kind]="Service"
+  output: > 
+    K8s Service deleted (user=NA 
+    service=%json.value[/protoPayload/response/metadata/name] 
+    ns=%json.value[/protoPayload/response/metadata/namespace]
+    ports=%json.value[/protoPayload/response/spec/ports])
+  priority: INFO
+  source: auditlogs
+  tags: [GCP, GKE, service, compliance]
+
+- rule: K8s ConfigMap Created
+  desc: Detect any attempt to create a configmap
+  condition: > 
+    is_k8s_service 
+    and consider_GKE_activity_events 
+    and al.method.name="io.k8s.core.v1.configmaps.create"
+  output: K8s ConfigMap Created (user=NA resource=%json.value[/protoPayload/resourceName])
+  priority: INFO
+  source: auditlogs
+  tags: [GCP, GKE, configmap, compliance]
+
+- rule: K8s ConfigMap Deleted
+  desc: Detect any attempt to delete a configmap
+  condition: > 
+    is_k8s_service 
+    and consider_GKE_activity_events 
+    and al.method.name="io.k8s.core.v1.configmaps.delete"
+  output: K8s ConfigMap Deleted (user=NA resource=%json.value[/protoPayload/resourceName])
+  priority: INFO
+  source: auditlogs
+  tags: [GCP, GKE, configmap, compliance]
+
+- rule: K8s Namespace Created
+  desc: Detect any attempt to create a namespace
+  condition: > 
+    is_k8s_service 
+    and consider_GKE_activity_events 
+    and namespace 
+    and al.method.name="io.k8s.core.v1.namespaces.create"
+  output: > 
+    K8s Namespace Created (user=NA 
+    ns=%json.value[/protoPayload/request/metadata/name]
+    resource=%json.value[/protoPayload/resourceName]))
+  priority: INFO
+  source: auditlogs
+  tags: [GCP, GKE, namespace, compliance]
+
+- rule: K8s Namespace Deleted
+  desc: Detect any attempt to delete a namespace
+  condition: > 
+    is_k8s_service 
+    and consider_GKE_activity_events 
+    and json.value[/protoPayload/response/kind]="Namespace" 
+    and al.method.name="io.k8s.core.v1.namespaces.delete"
+  output: > 
+    K8s Namespace Deleted (user=NA 
+    namespaceNam=%json.value[/protoPayload/response/metadata/name] 
+    ns=%json.value[/protoPayload/response/metadata/namespace])
+  priority: INFO
+  source: auditlogs
+  tags: [GCP, GKE, namespace, compliance]
+
+
+- rule: K8s Serviceaccount Created
+  desc: Detect any attempt to create a service account
+  condition: > 
+    is_k8s_service 
+    and consider_GKE_activity_events
+    and serviceaccount
+    and al.method.name="io.k8s.core.v1.serviceaccounts.create"
+  output: > 
+    K8s Serviceaccount Created (user=NA 
+    serviceAcc=%json.value[/protoPayload/request/metadata/name]
+    ns=%json.value[/protoPayload/request/metadata/namespace]
+    )
+  priority: INFO
+  source: auditlogs
+  tags: [GCP, GKE, serviceaccount, compliance]
+
+- rule: K8s Serviceaccount Deleted
+  desc: Detect any attempt to delete a service account
+  condition: > 
+    is_k8s_service 
+    and consider_GKE_activity_events
+    and json.value[/protoPayload/response/kind]="ServiceAccount"
+    and al.method.name="io.k8s.core.v1.serviceaccounts.delete"
+  output: > 
+    K8s Serviceaccount Deleted (user=NA 
+    serviceaccount=%json.value[/protoPayload/response/metadata/name] 
+    ns=%json.value[/protoPayload/response/metadata/namespace])
+  priority: INFO
+  source: auditlogs
+  tags: [GCP, GKE, serviceaccount, compliance]
+
+
+- rule: K8s Role/Clusterrole Created
+  desc: Detect any attempt to create a cluster role/role
+  condition: > 
+    is_k8s_service 
+    and consider_GKE_activity_events
+    and (role or clusterrole)
+    and (al.method.name="io.k8s.authorization.rbac.v1.clusterroles.create" or 
+    al.method.name="io.k8s.authorization.rbac.v1.roles.create")
+  output: > 
+    K8s Cluster Role Created (user=NA 
+    role=%json.value[/protoPayload/request/metadata/name]
+    rules=%json.value[/protoPayload/request/rules])
+  priority: INFO
+  source: auditlogs
+  tags: [GCP, GKE, role, compliance]
+
+- rule: K8s Role/Clusterrole Deleted
+  desc: Detect any attempt to delete a cluster role/role
+  condition: > 
+    is_k8s_service 
+    and consider_GKE_activity_events
+    and (json.value[/protoPayload/response/details/kind]="clusterroles" or json.value[/protoPayload/response/details/kind]="roles")
+    and (al.method.name="io.k8s.authorization.rbac.v1.clusterroles.delete" or 
+    al.method.name="io.k8s.authorization.rbac.v1.roles.delete")
+  output: > 
+    K8s Cluster Role Deleted (user=NA 
+    role=%json.value[/protoPayload/response/metadata/name] 
+    resource=%json.value[/protoPayload/resourceName])
+  priority: INFO
+  source: auditlogs
+  tags: [GCP, GKE, role, compliance]
+
+# - rule: K8s Role/Clusterrolebinding Created
+#   desc: Detect any attempt to create a clusterrolebinding
+#   condition: > 
+#     is_k8s_service 
+#     and consider_GKE_activity_events
+#   output: K8s Cluster Role Binding Created (user=%ka.user.name binding=%ka.target.name resource=%ka.target.resource subjects=%ka.req.binding.subjects role=%ka.req.binding.role resp=%ka.response.code decision=%ka.auth.decision reason=%ka.auth.reason)
+#   priority: INFO
+#   source: auditlogs
+#   tags: [GCP, GKE, rolebinding, compliance]
+
+# - rule: K8s Role/Clusterrolebinding Deleted
+#   desc: Detect any attempt to delete a clusterrolebinding
+#   condition: > 
+#     is_k8s_service 
+#     and consider_GKE_activity_events
+#   output: K8s Cluster Role Binding Deleted (user=%ka.user.name binding=%ka.target.name resource=%ka.target.resource resp=%ka.response.code decision=%ka.auth.decision reason=%ka.auth.reason)
+#   priority: INFO
+#   source: auditlogs
+#   tags: [GCP, GKE, rolebinding, compliance]

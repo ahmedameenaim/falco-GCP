@@ -2,3 +2,4 @@ libauditlogs.so
 secret.json
 wait.json
 help.txt
+falco.yaml

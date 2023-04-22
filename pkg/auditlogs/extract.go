@@ -1,7 +1,6 @@
 package auditlogs
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 
@@ -10,126 +9,20 @@ import (
 
 func (auditlogsPlugin *Plugin) Fields() []sdk.FieldEntry {
 	return []sdk.FieldEntry{
-		{Type: "string", Name: "al.principal", Desc: "GCP principal email who committed the action"},
-		{Type: "string", Name: "al.callerip", Desc: "GCP principal caller IP"},
-		{Type: "string", Name: "al.useragent", Desc: "GCP principal caller useragent"},
+		{Type: "string", Name: "al.principal.email", Desc: "GCP principal email who committed the action"},
+		{Type: "string", Name: "al.principal.ip", Desc: "GCP principal caller IP"},
+		{Type: "string", Name: "al.principal.useragent", Desc: "GCP principal caller useragent"},
+		{Type: "string", Name: "al.principal.authorinfo", Desc: "GCP authorization information affected resource"},
 		{Type: "string", Name: "al.service.name", Desc: "GCP API service name"},
 		{Type: "string", Name: "al.method.name", Desc: "GCP API service  method executed"},
-		{Type: "string", Name: "al.authorization.resources", Desc: "GCP authorization information affected resource", IsList: true, Arg: sdk.FieldEntryArg{
-			IsRequired: false,
-			IsIndex:    true,
-		},
-		},
-		{Type: "string", Name: "al.authorization.permissions", Desc: "GCP authorization information granted permission", IsList: true, Arg: sdk.FieldEntryArg{
-			IsRequired: false,
-			IsIndex:    true,
-		},
-		},
 
-		{Type: "string", Name: "al.resource.locations", Desc: "GCP resource locations zone", IsList: true, Arg: sdk.FieldEntryArg{
-			IsRequired: false,
-			IsIndex:    true,
-		},
-		},
+		{Type: "string", Name: "al.service.policyDelta", Desc: "GCP API service type"},
 
-		{Type: "string", Name: "al.meta", Desc: "GCP resource metadata"},
-		{Type: "string", Name: "al.resource.type", Desc: "GCP API service type"},
-		{Type: "string", Name: "al.policyDelta", Desc: "GCP API service type"},
-
-		{Type: "string", Name: "al.request", Desc: "GCP API service type", IsList: true, Arg: sdk.FieldEntryArg{
-			IsRequired: false,
-			IsIndex:    true,
-		},
-		},
+		{Type: "string", Name: "al.request", Desc: "GCP API service type"},
 	}
 }
 
-// func (auditlogsPlugin *Plugin) Extract(req sdk.ExtractRequest, evt sdk.EventReader) error {
-
-// 	data := auditlogsPlugin.lastLogEvent
-
-
-// 	if evt.EventNum() != auditlogsPlugin.lastEventNum {
-
-
-// 		evtBytes, err := ioutil.ReadAll(evt.Reader())
-// 		if err != nil {
-// 			return err
-// 		}
-	
-// 		err = json.Unmarshal(evtBytes, &data)
-// 		if err != nil {
-// 			return err
-// 		}
-	
-// 		auditlogsPlugin.lastLogEvent = data
-// 		auditlogsPlugin.lastEventNum = evt.EventNum()
-
-// 	}
-
-// 	switch req.Field() {
-
-// 	case "al.principal":
-// 		req.SetValue(data.ProtoPayload.AuthenticationInfo.PrincipalEmail)
-// 	case "al.callerip":
-// 		req.SetValue(data.ProtoPayload.RequestMetadata.CallerIp)
-// 	case "al.useragent":
-// 		req.SetValue(data.ProtoPayload.RequestMetadata.UserAgent)
-// 	case "al.service.name":
-// 		req.SetValue(data.ProtoPayload.ServiceName)
-// 	case "al.method.name":
-// 		req.SetValue(data.ProtoPayload.MethodName)
-// 	case "al.authorization.resources":
-// 		resources := []string{}
-// 		for _, i := range data.ProtoPayload.AuthorizationInfo {
-// 			resources = append(resources, i.Resource)
-// 		}
-// 		req.SetValue(resources)
-// 	case "al.authorization.permissions":
-// 		permissions := []string{}
-// 		for _, i := range data.ProtoPayload.AuthorizationInfo {
-// 			permissions = append(permissions, i.Permission)
-// 		}
-// 		req.SetValue(permissions)
-// 	case "al.resource.locations":
-// 		locations := []string{}
-
-// 		locations = append(locations, data.ProtoPayload.ResourceLocation.CurrentLocations...)
-// 		req.SetValue(locations)
-// 	case "al.meta":
-// 		var meta string
-// 		for key, value := range data.Resource.Labels {
-// 			meta += key + ":" + value + " "
-// 		}
-// 		req.SetValue(meta)
-// 	case "al.resource.type":
-// 		req.SetValue(data.Resource.Type)
-// 	case "al.bind.actions":
-// 		var actions []string
-// 		bindingData := data.ProtoPayload.ServiceData.PolicyDelta.BindingDeltas
-// 		for index := range bindingData {
-// 			actions = append(actions, bindingData[index].Action)
-// 		}
-// 		req.SetValue(actions)
-// 	case "al.bind.members":
-// 		var members []string
-// 		bindingData := data.ProtoPayload.ServiceData.PolicyDelta.BindingDeltas
-// 		for index := range bindingData {
-// 			members = append(members, bindingData[index].Member)
-// 		}
-// 		req.SetValue(members)
-// 	default:
-// 		return fmt.Errorf("no known field: %s", req.Field())
-// 	}
-
-// 	return nil
-// }
-
-
 func (auditlogsPlugin *Plugin) Extract(req sdk.ExtractRequest, evt sdk.EventReader) error {
-
-	data := auditlogsPlugin.lastLogEvent
-
 
 	if evt.EventNum() != auditlogsPlugin.lastEventNum {
 		
@@ -138,88 +31,68 @@ func (auditlogsPlugin *Plugin) Extract(req sdk.ExtractRequest, evt sdk.EventRead
 			return err
 		}
 	
-		err = json.Unmarshal(evtBytes, &data)
+		// For this plugin, events are always strings
+		evtString := string(evtBytes)
+
+		auditlogsPlugin.jdata, err = auditlogsPlugin.jparser.Parse(evtString)
 		if err != nil {
+			// Not a json file, so not present.
 			return err
 		}
-
-		auditlogsPlugin.lastLogEvent = data
-		auditlogsPlugin.lastEventNum = evt.EventNum()
+		auditlogsPlugin.jdataEvtnum = evt.EventNum()
 
 	}
 
+
 	switch req.Field() {
 
-	case "al.principal":
-		req.SetValue(data.ProtoPayload.AuthenticationInfo.PrincipalEmail)
-	case "al.callerip":
-		req.SetValue(data.ProtoPayload.RequestMetadata.CallerIp)
-	case "al.useragent":
-		req.SetValue(data.ProtoPayload.RequestMetadata.UserAgent)
-	case "al.service.name":
-		req.SetValue(data.ProtoPayload.ServiceName)
-	case "al.method.name":
-		req.SetValue(data.ProtoPayload.MethodName)
-	case "al.request":
-		requestElements := data.ProtoPayload.Request
+	case "al.principal.email":
+		principalEmail := string(auditlogsPlugin.jdata.Get("protoPayload").Get("authenticationInfo").Get("principalEmail").GetStringBytes())
+		req.SetValue(principalEmail)
 
-		var stringRequest []string
+	case "al.principal.ip":
+		principalIP := string(auditlogsPlugin.jdata.Get("protoPayload").Get("requestMetadata").Get("callerIp").GetStringBytes())
+		req.SetValue(principalIP)
 
-		b, err := json.Marshal(requestElements)
-		if err != nil {
-			return nil
-		}
-
-		stringRequest = append(stringRequest, string(b))
-
-		req.SetValue(stringRequest)
-
-	case "al.authorization.resources":
-		resources := make([]string, 0, len(data.ProtoPayload.AuthorizationInfo))
-		for _, info := range data.ProtoPayload.AuthorizationInfo {
-			resources = append(resources, info.Resource)
-		}
-		req.SetValue(resources)
-	case "al.authorization.permissions":
-		permissions := make([]string, 0, len(data.ProtoPayload.AuthorizationInfo))
-		for _, info := range data.ProtoPayload.AuthorizationInfo {
-			permissions = append(permissions, info.Permission)
-		}
-		req.SetValue(permissions)
-	case "al.resource.locations":
-		// locations := []string{}
-
-		// locations = append(locations, data.ProtoPayload.ResourceLocation.CurrentLocations...)
-		// req.SetValue(locations)
-		req.SetValue(data.ProtoPayload.ResourceLocation.CurrentLocations)
-	case "al.meta":
-		var meta string
-		for key, value := range data.Resource.Labels {
-			meta += key + ":" + value + " "
-		}
-		req.SetValue(meta)
-	case "al.resource.type":
-		req.SetValue(data.Resource.Type)
-	case "al.policyDelta":
-		if (data.Resource.Type == "gcs_bucket") {
-			bindingData := data.ProtoPayload.ServiceData.PolicyDelta.BindingDeltas
-			deltaString, err := json.Marshal(bindingData)
-			if err != nil {
-				return err
-			}
-			req.SetValue(string(deltaString))
+	case "al.principal.useragent":
+		principalUserAgent := auditlogsPlugin.jdata.Get("protoPayload").Get("requestMetadata").Get("callerSuppliedUserAgent")
+		if principalUserAgent != nil {
+			req.SetValue(string(principalUserAgent.GetStringBytes()))
 		} else {
-			bindingData := data.ProtoPayload.MetaData.DatasetChange.BindingDeltas
-			deltaString, err := json.Marshal(bindingData)
-			if err != nil {
-				return err
-			}	
-			req.SetValue(string(deltaString))
+			fmt.Println("Principal User Agent was omitted!")
 		}
-		
+
+	case "al.principal.authorinfo":
+		principalAuthorizationInfo := auditlogsPlugin.jdata.Get("protoPayload").Get("authorizationInfo").String()
+		req.SetValue(principalAuthorizationInfo)
+
+	case "al.service.name":
+		serviceName := string(auditlogsPlugin.jdata.Get("protoPayload").Get("serviceName").GetStringBytes())
+		req.SetValue(serviceName)
+
+	case "al.service.request":
+		request := auditlogsPlugin.jdata.Get("protoPayload").Get("request").String()
+		req.SetValue(request)
+
+	case "al.service.policyDelta":
+		resource := string(auditlogsPlugin.jdata.Get("resource").Get("type").GetStringBytes())
+		if resource == "gcs_bucket" {
+			bindingDeltas := auditlogsPlugin.jdata.Get("protoPayload").Get("serviceData").Get("policyDelta").Get("bindingDeltas").String()
+			req.SetValue(bindingDeltas)
+		} else {
+			bindingDeltas := auditlogsPlugin.jdata.Get("protoPayload").Get("metadata").Get("datasetChange").Get("bindingDeltas").String()
+			req.SetValue(bindingDeltas)
+		}
+
+	case "al.method.name":
+		serviceName := string(auditlogsPlugin.jdata.Get("protoPayload").Get("methodName").GetStringBytes())
+		req.SetValue(serviceName)
+
 	default:
 		return fmt.Errorf("no known field: %s", req.Field())
 	}
 
+	
 	return nil
+
 }
