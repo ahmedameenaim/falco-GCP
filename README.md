@@ -80,6 +80,8 @@ protoPayload.serviceName="bigquery.googleapis.com")
 
 You can change the log query to fit your specific needs.
 
+For more details about what Cloud logging log queries, see the [GCP official documentation](https://cloud.google.com/logging/docs/view/logging-query-language).
+
 # Supported Fields
 
 <!-- README-PLUGIN-FIELDS -->
