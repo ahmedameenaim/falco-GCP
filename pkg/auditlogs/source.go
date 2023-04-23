@@ -25,7 +25,6 @@ func (auditlogsPlugin *Plugin) pullMsgsSync(ctx context.Context, projectID, subI
 	sub.ReceiveSettings.MaxOutstandingMessages = auditlogsPlugin.Config.MaxOutstandingMessages
 	sub.ReceiveSettings.NumGoroutines = auditlogsPlugin.Config.NumGoroutines
 
-
 	eventC := make(chan []byte)
 	errC := make(chan error)
 
