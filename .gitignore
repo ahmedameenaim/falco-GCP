@@ -3,3 +3,4 @@ secret.json
 wait.json
 help.txt
 falco.yaml
+.pre-commit-config.yaml

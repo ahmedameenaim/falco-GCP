@@ -901,7 +901,7 @@
   condition: is_k8s_service and al.method.name="io.k8s.core.v1.pods.exec.create"
   output: > 
     project=%json.value[/resource/labels/project_id]
-    An access granted for principal user=%al.principal.email callerip=%al.principal.ip userIP=%al.principal.ip userAgent=%al.principal.useragent
+    An access granted on Pod %json.value[/protoPayload/resourceName] for principal user=%al.principal.email callerip=%al.principal.ip userIP=%al.principal.ip userAgent=%al.principal.useragent
     authorizationInfo=%al.principal.authorinfo
     clusterName=%json.value[/resource/labels/cluster_name]
   priority: NOTICE
