@@ -5,12 +5,6 @@ plugins:
   - name: auditlogs
     library_path: libauditlogs.so
     init_config: '{"num_goroutines": 4, "maxout_stand_messages": 100, "project_id": "ldp-dev-2", "sub_id":"amin-security-test-sub", "path":"wait.json"}'
-
-# Setting this list to empty ensures that the above plugins are *not*
-# loaded and enabled by default. If you want to use the above plugins,
-# set a meaningful init_config/open_params for the cloudtrail plugin
-# and then change this to:
-# load_plugins: [cloudtrail, json]
 load_plugins: [auditlogs, json]
 
 stdout_output:
