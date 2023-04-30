@@ -51,7 +51,21 @@ The GCP Audit Logs Plugin's detection rules can identify threats such as:
 
 The event source for `GCP Audit Logs Plugin` events is `GCP Audit Logs`.
 
-This GCP Audit Logs Plugin is designed to ingest GCP audit logs from several GCP services, including Compute Engine, GKE, KMS, Cloud Armor WAF, IAM, Firewall, Cloud Storage, BigQuery, Cloud SQL, Pub/Sub, Cloud Logging, and Cloud Functions. The GCP Audit Logs Plugin subscribes to a Pub/Sub topic service and is backed by an optimized sink that exports the most important log entries.
+This GCP Audit Logs Plugin is designed to ingest GCP audit logs from several GCP services, including: 
+* Compute Engine
+* GKE 
+* KMS 
+* Cloud Armor WAF 
+* IAM 
+* Firewall 
+* Cloud Storage
+* BigQuery
+* Cloud SQL
+* Pub/Sub
+* Cloud Logging
+* Cloud Functions
+
+The GCP Audit Logs Plugin subscribes to a Pub/Sub topic service and is backed by an optimized sink that exports the most important log entries.
 
 ```sql
 log_name="projects/****/logs/cloudaudit.googleapis.com%2Factivity" AND (
