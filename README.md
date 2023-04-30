@@ -68,7 +68,7 @@ This GCP Audit Logs Plugin is designed to ingest GCP audit logs from several GCP
 The GCP Audit Logs Plugin subscribes to a Pub/Sub topic service and is backed by an optimized sink that exports the most important log entries.
 
 ```sql
-log_name="projects/your-project-id/logs/cloudaudit.googleapis.com%2Factivity" AND (
+log_name="projects/your-GCP-project-id/logs/cloudaudit.googleapis.com%2Factivity" AND (
   (protoPayload.serviceName="k8s.io" AND (
     protoPayload.methodName=~"^io.k8s.apps.v1.deployments.(create|update|delete)$" OR
     protoPayload.methodName=~"^io.k8s.core.v1.services.(create|update|delete)$" OR
