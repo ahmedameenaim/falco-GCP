@@ -1,4 +1,4 @@
-package auditlogs
+package gcp_auditlog
 
 import (
 	"context"
@@ -14,7 +14,7 @@ func (auditlogsPlugin *Plugin) pullMsgsSync(ctx context.Context, projectID, subI
 	project_id := projectID
 	sub_id := subID
 
-	client, err := pubsub.NewClient(ctx, project_id,  option.WithCredentialsFile("/home/sherlock/.config/gcloud/application_default_credentials.json"))
+	client, err := pubsub.NewClient(ctx, project_id, option.WithCredentialsFile("/home/sherlock/.config/gcloud/application_default_credentials.json"))
 
 	if err != nil {
 		fmt.Printf("pubsub.NewClient: %v", err)
@@ -53,7 +53,6 @@ func (auditlogsPlugin *Plugin) pullMsgsSync(ctx context.Context, projectID, subI
 	return eventC, errC
 
 }
-
 
 func (auditlogsPlugin *Plugin) String(evt sdk.EventReader) (string, error) {
 

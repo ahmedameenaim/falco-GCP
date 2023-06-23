@@ -1,6 +1,6 @@
 # GCP audit logs Events Plugin
 
-This GCP Audit Logs Plugin is designed to ingest GCP audit logs for several GCP services, including Compute Engine, GKE, KMS, Cloud Armor WAF, IAM, Firewall, Cloud Storage, BigQuery, CloudSQL, Pub/Sub, Cloud Logging, and Cloud Functions.
+This GCP Audit Logs Plugin is designed to ingest GCP audit logs for several GCP services, including Compute Engine, KMS, Cloud Armor WAF, IAM, Firewall, Cloud Storage, BigQuery, CloudSQL, Pub/Sub, Cloud Logging, and Cloud Functions.
 
 The GCP Audit Logs Plugin's primary purpose is to detect security threats, vulnerabilities, and compliance risks by analyzing the ingested GCP audit logs. The default security detection rules were built with the MITRE & ATT&CK framework in mind, which provides a comprehensive and industry-standard way to identify and classify different types of security threats.
 
@@ -53,7 +53,6 @@ The event source for `GCP Audit Logs Plugin` events is `GCP Audit Logs`.
 
 This GCP Audit Logs Plugin is designed to ingest GCP audit logs from several GCP services, including: 
 * Compute Engine
-* GKE 
 * KMS 
 * Cloud Armor WAF 
 * IAM 
@@ -68,18 +67,7 @@ This GCP Audit Logs Plugin is designed to ingest GCP audit logs from several GCP
 The GCP Audit Logs Plugin subscribes to a Pub/Sub topic service and is backed by an optimized sink that exports the most important log entries.
 
 ```sql
-log_name="projects/your-gcp-project-id/logs/cloudaudit.googleapis.com%2Factivity" AND (
-  (protoPayload.serviceName="k8s.io" AND (
-    protoPayload.methodName=~"^io.k8s.apps.v1.deployments.(create|update|delete)$" OR
-    protoPayload.methodName=~"^io.k8s.core.v1.services.(create|update|delete)$" OR
-    protoPayload.methodName=~"^io.k8s.core.v1.namespaces.(create|update|delete)$" OR
-    protoPayload.methodName=~"^io.k8s.core.v1.serviceaccounts.(create|update|delete)$" OR
-    protoPayload.methodName=~"^io.k8s.authorization.rbac.v1.clusterroles.(create|update|delete)$" OR
-    protoPayload.methodName=~"^io.k8s.authorization.rbac.v1.roles.(create|update|delete)$" OR
-     (protoPayload.methodName=~"^io.k8s.core.v1.configmaps.(create|update|delete)$" AND NOT protoPayload.authenticationInfo.principalEmail=~"^system:") OR
-    protoPayload.methodName=~"^io.k8s.core.v1.pods.(create|update|delete)$"
-  )) OR protoPayload.methodName=~"io.k8s.core.v1.pods.exec.create"
-) OR
+log_name="projects/your-gcp-project-id/logs/cloudaudit.googleapis.com%2Factivity" AND
 (protoPayload.serviceName="cloudsql.googleapis.com" OR 
 protoPayload.serviceName="logging.googleapis.com" OR 
 protoPayload.serviceName="iam.googleapis.com" OR 
@@ -101,13 +89,13 @@ For more details about what Cloud logging log queries, see the [GCP official doc
 <!-- README-PLUGIN-FIELDS -->
 |              NAME               |   TYPE   |              DESCRIPTION                        |
 |---------------------------------|----------|-------------------------------------------------|
-| `al.principal.email`            | `string` | GCP principal email who committed the action    |
-| `al.principal.ip`               | `string` | GCP principal caller IP                         |
-| `al.principal.useragent`        | `string` | GCP principal caller useragent                  |
-| `al.principal.authorinfo`       | `string` | GCP authorization information affected resource |
-| `al.service.policyDelta`        | `string` | GCP API service name                            |
-| `al.service.request`            | `string` | GCP API raw request                             |
-| `al.method.name`                | `string` | GCP API service  method executed                |
+| `gcp.user`            | `string` | GCP principal email who committed the action    |
+| `gcp.callerIP`               | `string` | GCP principal caller IP                         |
+| `gcp.userAgent `        | `string` | GCP principal caller useragent                  |
+| `gcp.authorizationInfo `       | `string` | GCP authorization information affected resource |
+| `gcp.policyDelta`        | `string` | GCP API service name                            |
+| `gcp.request`            | `string` | GCP API raw request                             |
+| `gcp.serviceName`                | `string` | GCP API service  method executed                |
 
 <!-- /README-PLUGIN-FIELDS -->
 
@@ -157,8 +145,8 @@ See example:
   condition: is_gcs_service and is_binded_delta_to_public 
   output: > 
     project=%json.value[/resource/labels/project_id]
-    A GCP bucket access granted to be public by user=%al.principal.email userIP=%al.principal.ip userAgent=%al.principal.useragent bindedDelta=%al.service.policyDelta
-    authorizationInfo=%al.principal.authorinfo
+    A GCP bucket access granted to be public by user=%gcp.user userIP=%gcp.callerIP userAgent=%gcp.userAgent  bindedDelta=%al.service.policyDelta
+    authorizationInfo=%gcp.authorizationInfo 
     bucketName=%json.value[/resource/labels/bucket_name]  
   priority: CRITICAL
   source: auditlogs
@@ -178,7 +166,7 @@ falco -c falco.yaml -r auditlogs_rules.yaml
 ## Results
 
 ```shell
-{"hostname":"sherlock","output":"01:36:49.223570000: Notice project=-***-**-*** A GCP WAF network policy or waf rule modified by user=ahmed.amin@test.com userIP=x.x.x.x userAgent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36,gzip(gfe),gzip(gfe) authorizationInfo=[{\"granted\":true,\"permission\":\"compute.securityPolicies.update\",\"resourceAttributes\":{\"name\":\"projects/-***-**-***/global/securityPolicies/xxx-xxxx-xxxx\",\"service\":\"compute\",\"type\":\"compute.securityPolicies\"}}] policyName=xxx-xxxx-xxxx","priority":"Notice","rule":"GCP WAF rule modified or deleted","source":"auditlogs","tags":["CloudArmor","GCP","T1562-impair-defenses","TA0005-defense-evasion","WAF"],"time":"2023-04-22T23:36:49.223570000Z", "output_fields": {"al.principal.authorinfo":"[{\"granted\":true,\"permission\":\"compute.securityPolicies.update\",\"resourceAttributes\":{\"name\":\"projects/-***-**-***/global/securityPolicies/xxx-xxxx-xxxx\",\"service\":\"compute\",\"type\":\"compute.securityPolicies\"}}]","al.principal.email":"ahmed.amin@test.com","al.principal.ip":"x.x.x.x","al.principal.useragent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36,gzip(gfe),gzip(gfe)","evt.time":1682206609223570000,"json.value[/resource/labels/policy_name]":"xxx-xxxx-xxxx","json.value[/resource/labels/project_id]":"-***-**-***"}}
-{"hostname":"sherlock","output":"01:34:33.033434000: Notice project=-***-**-*** An access granted for principal user=ahmed.amin@test.com callerip=x.x.x.x userIP=x.x.x.x userAgent=kubectl/v1.24.10 (linux/amd64) kubernetes/5c1d2d4 authorizationInfo=[{\"granted\":true,\"permission\":\"io.k8s.core.v1.pods.exec.create\",\"resource\":\"core/v1/namespaces/default/pods/xxxx-b7f4b5f95-lfvqz/exec\"}] clusterName=xxx-xxx-xxx","priority":"Notice","rule":"GCP Pod exec initiated","source":"auditlogs","tags":["GCP","GKE","Pod","compliance"],"time":"2023-04-22T23:34:33.033434000Z", "output_fields": {"al.principal.authorinfo":"[{\"granted\":true,\"permission\":\"io.k8s.core.v1.pods.exec.create\",\"resource\":\"core/v1/namespaces/default/pods/******-b7f4b5f95-lfvqz/exec\"}]","al.principal.email":"ahmed.amin@test.com","al.principal.ip":"x.x.x.x","al.principal.useragent":"kubectl/v1.24.10 (linux/amd64) kubernetes/5c1d2d4","evt.time":1682206473033434000,"json.value[/resource/labels/cluster_name]":"xxx-xxx-xxx","json.value[/resource/labels/project_id]":"-***-**-***"}}
+{"hostname":"sherlock","output":"01:36:49.223570000: Notice project=-***-**-*** A GCP WAF network policy or waf rule modified by user=ahmed.amin@test.com userIP=x.x.x.x userAgent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36,gzip(gfe),gzip(gfe) authorizationInfo=[{\"granted\":true,\"permission\":\"compute.securityPolicies.update\",\"resourceAttributes\":{\"name\":\"projects/-***-**-***/global/securityPolicies/xxx-xxxx-xxxx\",\"service\":\"compute\",\"type\":\"compute.securityPolicies\"}}] policyName=xxx-xxxx-xxxx","priority":"Notice","rule":"GCP WAF rule modified or deleted","source":"auditlogs","tags":["CloudArmor","GCP","T1562-impair-defenses","TA0005-defense-evasion","WAF"],"time":"2023-04-22T23:36:49.223570000Z", "output_fields": {"gcp.authorizationInfo ":"[{\"granted\":true,\"permission\":\"compute.securityPolicies.update\",\"resourceAttributes\":{\"name\":\"projects/-***-**-***/global/securityPolicies/xxx-xxxx-xxxx\",\"service\":\"compute\",\"type\":\"compute.securityPolicies\"}}]","gcp.user":"ahmed.amin@test.com","al.principal.ip":"x.x.x.x","gcp.userAgent ":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36,gzip(gfe),gzip(gfe)","evt.time":1682206609223570000,"json.value[/resource/labels/policy_name]":"xxx-xxxx-xxxx","json.value[/resource/labels/project_id]":"-***-**-***"}}
+{"hostname":"sherlock","output":"01:34:33.033434000: Notice project=-***-**-*** An access granted for principal user=ahmed.amin@test.com callerip=x.x.x.x userIP=x.x.x.x userAgent=kubectl/v1.24.10 (linux/amd64) kubernetes/5c1d2d4 authorizationInfo=[{\"granted\":true,\"permission\":\"io.k8s.core.v1.pods.exec.create\",\"resource\":\"core/v1/namespaces/default/pods/xxxx-b7f4b5f95-lfvqz/exec\"}] clusterName=xxx-xxx-xxx","priority":"Notice","rule":"GCP Pod exec initiated","source":"auditlogs","tags":["GCP","GKE","Pod","compliance"],"time":"2023-04-22T23:34:33.033434000Z", "output_fields": {"gcp.authorizationInfo ":"[{\"granted\":true,\"permission\":\"io.k8s.core.v1.pods.exec.create\",\"resource\":\"core/v1/namespaces/default/pods/******-b7f4b5f95-lfvqz/exec\"}]","gcp.user":"ahmed.amin@test.com","al.principal.ip":"x.x.x.x","gcp.userAgent ":"kubectl/v1.24.10 (linux/amd64) kubernetes/5c1d2d4","evt.time":1682206473033434000,"json.value[/resource/labels/cluster_name]":"xxx-xxx-xxx","json.value[/resource/labels/project_id]":"-***-**-***"}}
 
 ```

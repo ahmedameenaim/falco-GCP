@@ -1,4 +1,4 @@
-package auditlogs
+package gcp_auditlog
 
 import (
 	"encoding/json"
