@@ -142,10 +142,10 @@ See example:
 ```yaml
 - rule: GCP Bucket configured to be public
   desc: Detect when access on a GCP Bucket granted to the public internet.
-  condition: is_gcs_service and is_binded_delta_to_public 
+  condition: is_gcs_service and gcp.methodName="storage.setIamPermissions" and is_binded_delta_to_public 
   output: > 
     project=%json.value[/resource/labels/project_id]
-    A GCP bucket access granted to be public by user=%gcp.user userIP=%gcp.callerIP userAgent=%gcp.userAgent  bindedDelta=%al.service.policyDelta
+    A GCP bucket access granted to be public by user=%gcp.user userIP=%gcp.callerIP userAgent=%gcp.userAgent  bindedDelta=%gcp.policyDelta
     authorizationInfo=%gcp.authorizationInfo 
     bucketName=%json.value[/resource/labels/bucket_name]  
   priority: CRITICAL
@@ -161,12 +161,16 @@ falco -c falco.yaml -r auditlogs_rules.yaml
 
 ## Requirements
 
-* `Falco` >= 0.31
+* `Falco` >= 0.35
 
 ## Results
 
 ```shell
+{"hostname":"sherlock-ThinkBook-15-G2-ITL","output":"03:36:21.780289000: Critical project=********** A GCP bucket access granted to be public by user=ahmed.amin@test.com userIP=156.204.230.94 userAgent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36,gzip(gfe),gzip(gfe)  bindedDelta=[{\"action\":\"ADD\",\"member\":\"allUsers\",\"role\":\"roles/storage.objectViewer\"}] authorizationInfo=[{\"granted\":true,\"permission\":\"storage.buckets.setIamPolicy\",\"resource\":\"projects/_/buckets/amin-test\",\"resourceAttributes\":{}}]  bucketName=ahmed-test","priority":"Critical","rule":"GCP Bucket configured to be public","source":"gcp_auditlog","tags":["GCP","buckets","compliance"],"time":"2023-06-30T00:36:21.780289000Z", "output_fields": {"evt.time":1688085381780289000,"gcp.authorizationInfo":"[{\"granted\":true,\"permission\":\"storage.buckets.setIamPolicy\",\"resource\":\"projects/_/buckets/ahmed-test\",\"resourceAttributes\":{}}]","gcp.callerIP":"156.204.230.94","gcp.policyDelta":"[{\"action\":\"ADD\",\"member\":\"allUsers\",\"role\":\"roles/storage.objectViewer\"}]","gcp.user":"ahmed.amin@test.com","gcp.userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36,gzip(gfe),gzip(gfe)","json.value[/resource/labels/bucket_name]":"ahmed-test","json.value[/resource/labels/project_id]":"**********"}}
+
 {"hostname":"sherlock","output":"01:36:49.223570000: Notice project=-***-**-*** A GCP WAF network policy or waf rule modified by user=ahmed.amin@test.com userIP=x.x.x.x userAgent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36,gzip(gfe),gzip(gfe) authorizationInfo=[{\"granted\":true,\"permission\":\"compute.securityPolicies.update\",\"resourceAttributes\":{\"name\":\"projects/-***-**-***/global/securityPolicies/xxx-xxxx-xxxx\",\"service\":\"compute\",\"type\":\"compute.securityPolicies\"}}] policyName=xxx-xxxx-xxxx","priority":"Notice","rule":"GCP WAF rule modified or deleted","source":"auditlogs","tags":["CloudArmor","GCP","T1562-impair-defenses","TA0005-defense-evasion","WAF"],"time":"2023-04-22T23:36:49.223570000Z", "output_fields": {"gcp.authorizationInfo ":"[{\"granted\":true,\"permission\":\"compute.securityPolicies.update\",\"resourceAttributes\":{\"name\":\"projects/-***-**-***/global/securityPolicies/xxx-xxxx-xxxx\",\"service\":\"compute\",\"type\":\"compute.securityPolicies\"}}]","gcp.user":"ahmed.amin@test.com","al.principal.ip":"x.x.x.x","gcp.userAgent ":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36,gzip(gfe),gzip(gfe)","evt.time":1682206609223570000,"json.value[/resource/labels/policy_name]":"xxx-xxxx-xxxx","json.value[/resource/labels/project_id]":"-***-**-***"}}
-{"hostname":"sherlock","output":"01:34:33.033434000: Notice project=-***-**-*** An access granted for principal user=ahmed.amin@test.com callerip=x.x.x.x userIP=x.x.x.x userAgent=kubectl/v1.24.10 (linux/amd64) kubernetes/5c1d2d4 authorizationInfo=[{\"granted\":true,\"permission\":\"io.k8s.core.v1.pods.exec.create\",\"resource\":\"core/v1/namespaces/default/pods/xxxx-b7f4b5f95-lfvqz/exec\"}] clusterName=xxx-xxx-xxx","priority":"Notice","rule":"GCP Pod exec initiated","source":"auditlogs","tags":["GCP","GKE","Pod","compliance"],"time":"2023-04-22T23:34:33.033434000Z", "output_fields": {"gcp.authorizationInfo ":"[{\"granted\":true,\"permission\":\"io.k8s.core.v1.pods.exec.create\",\"resource\":\"core/v1/namespaces/default/pods/******-b7f4b5f95-lfvqz/exec\"}]","gcp.user":"ahmed.amin@test.com","al.principal.ip":"x.x.x.x","gcp.userAgent ":"kubectl/v1.24.10 (linux/amd64) kubernetes/5c1d2d4","evt.time":1682206473033434000,"json.value[/resource/labels/cluster_name]":"xxx-xxx-xxx","json.value[/resource/labels/project_id]":"-***-**-***"}}
+
+{"hostname":"sherlock-ThinkBook-15-G2-ITL","output":"02:48:23.599777000: Notice project=xxx-xxxx-xxxx A GCP serviceAccount delete by user=ahmed.amin@test.com userIP=156.204.230.94 userAgent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36,gzip(gfe)  authorizationInfo=[{\"granted\":true,\"permission\":\"iam.serviceAccounts.delete\",\"resource\":\"projects/-/serviceAccounts/101363364166838521279\",\"resourceAttributes\":{\"name\":\"projects/-/serviceAccounts/101363364166838521279\"}}]","priority":"Notice","rule":"GCP IAM serviceAccount deleted","source":"gcp_auditlog","tags":["GCP","IAM","abuse-elevation-control-mechanism"],"time":"2023-06-29T23:48:23.599777000Z", "output_fields": {"evt.time":1688082503599777000,"gcp.authorizationInfo":"[{\"granted\":true,\"permission\":\"iam.serviceAccounts.delete\",\"resource\":\"projects/-/serviceAccounts/101363364166838521279\",\"resourceAttributes\":{\"name\":\"projects/-/serviceAccounts/101363364166838521279\"}}]","gcp.callerIP":"156.204.230.94","gcp.user":"ahmed.amin@test.com","gcp.userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36,gzip(gfe)","json.value[/resource/labels/project_id]":"xxx-xxxx-xxxx"}}
+
 
 ```

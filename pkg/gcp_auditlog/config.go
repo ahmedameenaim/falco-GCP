@@ -9,7 +9,6 @@ type Plugin struct {
 	plugins.BasePlugin
 	Config PluginConfig
 
-	lastLogEvent LogEvent
 	lastEventNum uint64
 	jparser      fastjson.Parser
 	jdata        *fastjson.Value

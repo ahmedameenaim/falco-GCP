@@ -14,8 +14,8 @@
 SHELL=/bin/bash -o pipefail
 GO ?= go
 
-NAME := auditlogs
-OUTPUT := lib$(NAME).so
+NAME := gcp_auditlog
+OUTPUT := $(NAME).so
 
 ifeq ($(DEBUG), 1)
     GODEBUGFLAGS= GODEBUG=cgocheck=2
