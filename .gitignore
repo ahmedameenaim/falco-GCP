@@ -1,4 +1,4 @@
-libauditlogs.so
+gcp_auditlog.so
 secret.json
 wait.json
 help.txt

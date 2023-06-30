@@ -1,4 +1,4 @@
-package gcp_auditlog
+package main
 
 import (
 	"falcoplugin/pkg/gcp_auditlog"

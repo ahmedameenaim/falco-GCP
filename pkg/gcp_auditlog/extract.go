@@ -57,12 +57,20 @@ func (auditlogsPlugin *Plugin) Extract(req sdk.ExtractRequest, evt sdk.EventRead
 		}
 
 	case "gcp.authorizationInfo":
-		principalAuthorizationInfo := auditlogsPlugin.jdata.Get("protoPayload").Get("authorizationInfo").String()
-		req.SetValue(principalAuthorizationInfo)
+		principalAuthorizationInfo := auditlogsPlugin.jdata.Get("protoPayload").Get("authorizationInfo")
+		if principalAuthorizationInfo.Exists() {
+			req.SetValue(principalAuthorizationInfo.String())
+		} else {
+			fmt.Println("Authorization info was omitted!")
+		}
 
 	case "gcp.serviceName":
-		serviceName := string(auditlogsPlugin.jdata.Get("protoPayload").Get("serviceName").GetStringBytes())
-		req.SetValue(serviceName)
+		serviceName := auditlogsPlugin.jdata.Get("protoPayload").Get("serviceName")
+		if serviceName.Exists() {
+			req.SetValue(string(serviceName.GetStringBytes()))
+		} else {
+			fmt.Println("Service name was omitted!")
+		}
 
 	case "gcp.request":
 		request := auditlogsPlugin.jdata.Get("protoPayload").Get("request").String()
@@ -70,8 +78,10 @@ func (auditlogsPlugin *Plugin) Extract(req sdk.ExtractRequest, evt sdk.EventRead
 
 	case "gcp.policyDelta":
 		resource := string(auditlogsPlugin.jdata.Get("resource").Get("type").GetStringBytes())
+
 		if resource == "gcs_bucket" {
 			bindingDeltas := auditlogsPlugin.jdata.Get("protoPayload").Get("serviceData").Get("policyDelta").Get("bindingDeltas").String()
+
 			req.SetValue(bindingDeltas)
 		} else {
 			bindingDeltas := auditlogsPlugin.jdata.Get("protoPayload").Get("metadata").Get("datasetChange").Get("bindingDeltas").String()

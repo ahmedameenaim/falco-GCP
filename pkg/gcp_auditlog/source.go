@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"strings"
+	"time"
 
 	"cloud.google.com/go/pubsub"
 	"github.com/falcosecurity/plugin-sdk-go/pkg/sdk"
@@ -33,17 +35,29 @@ func (auditlogsPlugin *Plugin) pullMsgsSync(ctx context.Context, projectID, subI
 		defer close(eventC)
 		defer close(errC)
 
-		for {
+		maxRetries := 3
+		retryDelay := time.Second
 
-			err = sub.Receive(ctx, func(_ context.Context, msg *pubsub.Message) {
-				eventC <- msg.Data
-				msg.Ack()
-			})
+		for retries := 0; retries < maxRetries; retries++ {
+
+			err = performPubSubOperation(sub, ctx, eventC)
+
+			if err == nil {
+				// Operation succeeded, break out of the loop
+				break
+			}
+
+			if isQuotaExceededError(err) {
+				// Quota exceeded, wait for backoff duration and retry
+				fmt.Printf("Quota exceeded. Retrying in %s\n", retryDelay)
+				time.Sleep(retryDelay)
+				retryDelay *= 2 // exponential backoff
+			}
 
 			if err != nil {
 				errC <- err
 				fmt.Printf("error is : %v", err)
-				return
+				break
 			}
 
 		}
@@ -52,6 +66,22 @@ func (auditlogsPlugin *Plugin) pullMsgsSync(ctx context.Context, projectID, subI
 
 	return eventC, errC
 
+}
+
+func isQuotaExceededError(err error) bool {
+	return strings.Contains(err.Error(), "quota exceeded")
+}
+
+func performPubSubOperation(subscription *pubsub.Subscription, ctx context.Context, eventC chan []byte) error {
+	err := subscription.Receive(ctx, func(ctx context.Context, msg *pubsub.Message) {
+		eventC <- msg.Data
+		msg.Ack()
+	})
+
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (auditlogsPlugin *Plugin) String(evt sdk.EventReader) (string, error) {

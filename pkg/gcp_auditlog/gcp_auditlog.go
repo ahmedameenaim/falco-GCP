@@ -6,7 +6,6 @@ import (
 	// "fmt"
 	// "github.com/falcosecurity/plugin-sdk-go/pkg/sdk"
 	"context"
-	"encoding/json"
 
 	"github.com/falcosecurity/plugin-sdk-go/pkg/sdk/plugins"
 	"github.com/falcosecurity/plugin-sdk-go/pkg/sdk/plugins/source"
@@ -17,61 +16,9 @@ const (
 	PluginName               = "gcp_auditlog"
 	PluginDescription        = "Reference plugin for educational purposes"
 	PluginContact            = "github.com/falcosecurity/plugins"
-	PluginVersion            = "0.5.0"
-	PluginEventSource        = "auditlogs"
+	PluginVersion            = "0.6.0"
+	PluginEventSource        = "gcp_auditlog"
 )
-
-// The data struct for the decoded data
-type LogEvent struct {
-	ProtoPayload struct {
-		AuthenticationInfo struct {
-			PrincipalEmail string `json:"principalEmail"`
-		} `json:"authenticationInfo"`
-
-		RequestMetadata struct {
-			CallerIp  string `json:"callerIp"`
-			UserAgent string `json:"callerSuppliedUserAgent"`
-		} `json:"requestMetadata"`
-
-		AuthorizationInfo []struct {
-			Resource   string `json:"resource"`
-			Permission string `json:"permission"`
-		} `json:"authorizationInfo"`
-
-		ServiceName  string          `json:"serviceName"`
-		MethodName   string          `json:"methodName"`
-		Request      json.RawMessage `json:"request,omitempty"`
-		TimeStamp    uint64          `json:"timestamp"`
-		ResourceName string          `json:"resourceName"`
-		//This field would be deprecated, metadata field will be the alternative
-		ServiceData struct {
-			PolicyDelta struct {
-				BindingDeltas []struct {
-					Action string `json:"action"`
-					Role   string `json:"role"`
-					Member string `json:"member"`
-				} `json:"bindingDeltas"`
-			} `json:"policyDelta"`
-		} `json:"serviceData,omitempty"`
-		MetaData struct {
-			DatasetChange struct {
-				BindingDeltas []struct {
-					Action string `json:"action"`
-					Role   string `json:"role"`
-					Member string `json:"member"`
-				} `json:"bindingDeltas"`
-			} `json:"datasetChange"`
-		} `json:"metadata,omitempty"`
-		ResourceLocation struct {
-			CurrentLocations []string `json:"currentLocations"`
-		} `json:"resourceLocation"`
-	} `json:"protoPayload"`
-
-	Resource struct {
-		Type   string            `json:"type"`
-		Labels map[string]string `json:"labels"`
-	} `json:"resource"`
-}
 
 func (auditlogsPlugin *Plugin) Info() *plugins.Info {
 	return &plugins.Info{

@@ -3,7 +3,7 @@ plugins:
     library_path: libjson.so
 
   - name: gcp_auditlog
-    library_path: libauditlogs.so
+    library_path: gcp_auditlog.so
     init_config: '{"num_goroutines": 4, "maxout_stand_messages": 100, "project_id": "ldp-dev-2", "sub_id":"amin-security-test-sub", "path":"wait.json"}'
 load_plugins: [gcp_auditlog, json]
 
