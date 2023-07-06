@@ -128,15 +128,15 @@ Only `init` accepts settings:
     - name: json
       library_path: libjson.so
 
-    - name: auditlogs
-      library_path: libauditlogs.so
+    - name: gcp_auditlog
+      library_path: gcp_auditlog.so
       init_config: '{"num_goroutines": 4, "maxout_stand_messages": 100, "project_id": "your-gcp-project", "sub_id":"Your-subscription-ID"}'
-  load_plugins: [auditlogs, json]
+  load_plugins: [gcp_auditlog, json]
   ```
 
 * `rules.yaml`
 
-The `source` for rules must be `auditlogs`.
+The `source` for rules must be `gcp_auditlog`.
 
 See example:
 ```yaml
