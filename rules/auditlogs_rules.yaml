@@ -57,7 +57,7 @@
   output: >
     project=%json.value[/resource/labels/project_id] 
     A CloudSQL DB user has been updated by user=%gcp.user userIP=%gcp.callerIP userAgent=%gcp.userAgent 
-    authorizationInfo=%gcp.authorizationInfo 
+    authorizationInfo=%gcp.authorizationInfo rawRequest=%gcp.request
     databaseName=%json.value[/resource/labels/database_id]
   priority: NOTICE
   source: gcp_auditlog
@@ -69,7 +69,7 @@
   output: > 
     project=%json.value[/resource/labels/project_id]
     A Cloud SQL DB backup has been deleted by user=%gcp.user userIP=%gcp.callerIP userAgent=%gcp.userAgent 
-    authorizationInfo=%gcp.authorizationInfo 
+    authorizationInfo=%gcp.authorizationInfo rawRequest=%gcp.request
     databaseName=%json.value[/resource/labels/database_id]
   priority: NOTICE
   source: gcp_auditlog
@@ -82,7 +82,7 @@
   output: > 
     project=%json.value[/resource/labels/project_id]
     A Cloud SQL DB instance data exported to a cloud storage bucket by user=%gcp.user userIP=%gcp.callerIP userAgent=%gcp.userAgent 
-    authorizationInfo=%gcp.authorizationInfo 
+    authorizationInfo=%gcp.authorizationInfo rawRequest=%gcp.request
     databaseName=%json.value[/resource/labels/database_id]
   priority: NOTICE
   source: gcp_auditlog
@@ -94,7 +94,7 @@
   output: > 
     project=%json.value[/resource/labels/project_id]
     A Cloud SQL DB instance has been deleted by user=%gcp.user userIP=%gcp.callerIP userAgent=%gcp.userAgent 
-    authorizationInfo=%gcp.authorizationInfo 
+    authorizationInfo=%gcp.authorizationInfo rawRequest=%gcp.request
     databaseName=%json.value[/resource/labels/database_id]
   priority: NOTICE
   source: gcp_auditlog
@@ -109,7 +109,7 @@
   output: > 
     project=%json.value[/resource/labels/project_id]
     A Cloud SQL DB instance has been modified or created by user=%gcp.user userIP=%gcp.callerIP userAgent=%gcp.userAgent 
-    authorizationInfo=%gcp.authorizationInfo 
+    authorizationInfo=%gcp.authorizationInfo rawRequest=%gcp.request
     databaseName=%json.value[/resource/labels/database_id]
   priority: NOTICE
   source: gcp_auditlog
@@ -121,7 +121,7 @@
   output: > 
     project=%json.value[/resource/labels/project_id]
     A GCP bucket access granted to be public by user=%gcp.user userIP=%gcp.callerIP userAgent=%gcp.userAgent  bindedDelta=%gcp.policyDelta
-    authorizationInfo=%gcp.authorizationInfo 
+    authorizationInfo=%gcp.authorizationInfo rawRequest=%gcp.request
     bucketName=%json.value[/resource/labels/bucket_name]  
   priority: CRITICAL
   source: gcp_auditlog
@@ -136,7 +136,7 @@
   output: > 
     project=%json.value[/resource/labels/project_id]
     A GCP bucket objects access granted to be public by user=%gcp.user userIP=%gcp.callerIP userAgent=%gcp.userAgent 
-    authorizationInfo=%gcp.authorizationInfo 
+    authorizationInfo=%gcp.authorizationInfo rawRequest=%gcp.request
     bucketName=%json.value[/resource/labels/bucket_name] 
   priority: CRITICAL
   source: gcp_auditlog
@@ -148,7 +148,7 @@
   output: > 
     project=%json.value[/resource/labels/project_id]
     GCS buckets has been listed to user=%gcp.user userIP=%gcp.callerIP userAgent=%gcp.userAgent 
-    authorizationInfo=%gcp.authorizationInfo 
+    authorizationInfo=%gcp.authorizationInfo rawRequest=%gcp.request
     bucketName=%json.value[/resource/labels/bucket_name]
   priority: NOTICE
   source: gcp_auditlog
@@ -160,7 +160,7 @@
   output: >
     project=%json.value[/resource/labels/project_id] 
     A GCS bucket has been deleted by user=%gcp.user userIP=%gcp.callerIP userAgent=%gcp.userAgent 
-    authorizationInfo=%gcp.authorizationInfo 
+    authorizationInfo=%gcp.authorizationInfo rawRequest=%gcp.request
     bucketName=%json.value[/resource/labels/bucket_name]
   priority: NOTICE
   source: gcp_auditlog
@@ -172,7 +172,7 @@
   output: > 
     project=%json.value[/resource/labels/project_id]
     A GCS bucket has been updated by user=%gcp.user callerip=%gcp.callerIP useragent=%gcp.userAgent  service=%gcp.serviceName method=%gcp.methodName zones=
-    bucketName=%json.value[/resource/labels/bucket_name]
+    bucketName=%json.value[/resource/labels/bucket_name] rawRequest=%gcp.request
   priority: NOTICE
   source: gcp_auditlog
   tags: [GCP, buckets, compliance]
@@ -184,6 +184,7 @@
     project=%json.value[/resource/labels/project_id]
     A GCS bucket Iam policy has been changed by user=%gcp.user userIP=%gcp.callerIP userAgent=%gcp.userAgent 
     authorizationInfo=%gcp.authorizationInfo 
+    rawRequest=%gcp.request
     bucketName=%json.value[/resource/labels/bucket_name]
   priority: NOTICE
   source: gcp_auditlog
@@ -199,6 +200,7 @@
     project=%json.value[/resource/labels/project_id]
     A GCP Bigquery dataset access granted to be public by user=%gcp.user userIP=%gcp.callerIP userAgent=%gcp.userAgent 
     authorizationInfo=%gcp.authorizationInfo 
+    rawRequest=%gcp.request
     datasetName=%json.value[/resource/labels/dataset_id]
   priority: CRITICAL
   source: gcp_auditlog
@@ -216,7 +218,7 @@
   output: > 
     project=%json.value[/resource/labels/project_id]
     A GCP VM has ben stopped by user=%gcp.user userIP=%gcp.callerIP userAgent=%gcp.userAgent 
-    authorizationInfo=%gcp.authorizationInfo 
+    authorizationInfo=%gcp.authorizationInfo rawRequest=%gcp.request
   priority: NOTICE
   source: gcp_auditlog
   tags: [GCP, VM, TA0005-defense-evasion, T1562-impair-defenses]
@@ -228,7 +230,7 @@
   output: > 
     project=%json.value[/resource/labels/project_id]
     A GCP VM has ben stopped by user=%gcp.user userIP=%gcp.callerIP userAgent=%gcp.userAgent 
-    authorizationInfo=%gcp.authorizationInfo 
+    authorizationInfo=%gcp.authorizationInfo rawRequest=%gcp.request
   priority: NOTICE
   source: gcp_auditlog
   tags: [GCP, VM, TA0005-defense-evasion, T1562-impair-defenses]
@@ -243,7 +245,7 @@
   output: > 
     project=%json.value[/resource/labels/project_id]
     A GCP GCE Firewall rule modified by user=%gcp.user userIP=%gcp.callerIP userAgent=%gcp.userAgent 
-    authorizationInfo=%gcp.authorizationInfo 
+    authorizationInfo=%gcp.authorizationInfo rawRequest=%gcp.request
   priority: NOTICE
   source: gcp_auditlog
   tags: [GCP, Firewall, TA0005-defense-evasion, T1562-impair-defenses]
@@ -258,7 +260,7 @@
   output: > 
     project=%json.value[/resource/labels/project_id]
     A GCP WAF network policy or waf rule modified by user=%gcp.user userIP=%gcp.callerIP userAgent=%gcp.userAgent 
-    authorizationInfo=%gcp.methodName 
+    authorizationInfo=%gcp.methodName rawRequest=%gcp.request
     policyName=%json.value[/resource/labels/policy_name]
   priority: NOTICE
   source: gcp_auditlog
@@ -273,8 +275,8 @@
     or gcp.methodName contains "compute.securityPolicies.patchRule")
   output: > 
     project=%json.value[/resource/labels/project_id]
-    A GCP WAF network policy or waf rule modified by user=%gcp.user user=%gcp.user userIP=%gcp.callerIP userAgent=%gcp.userAgent 
-    authorizationInfo=%gcp.authorizationInfo 
+    A GCP WAF network policy or waf rule modified by user=%gcp.user userIP=%gcp.callerIP userAgent=%gcp.userAgent 
+    authorizationInfo=%gcp.authorizationInfo rawRequest=%gcp.request
     policyName=%json.value[/resource/labels/policy_name]
   priority: NOTICE
   source: gcp_auditlog
@@ -291,6 +293,7 @@
     project=%json.value[/resource/labels/project_id]
     A GCP CloudArmor edge security modified by user=%gcp.user user=%gcp.user userIP=%gcp.callerIP userAgent=%gcp.userAgent 
     authorizationInfo=%gcp.authorizationInfo 
+    rawRequest=%gcp.request
     policyName=%json.value[/resource/labels/policy_name]
   priority: NOTICE
   source: gcp_auditlog
@@ -304,6 +307,7 @@
     project=%json.value[/resource/labels/project_id]
     A GCP backendService deleted by user=%gcp.user userIP=%gcp.callerIP userAgent=%gcp.userAgent 
     authorizationInfo=%gcp.authorizationInfo 
+    rawRequest=%gcp.request
   priority: NOTICE
   source: gcp_auditlog
   tags: [GCP, backendService, T1498-DOS]
@@ -316,6 +320,7 @@
     project=%json.value[/resource/labels/project_id]
     A GCP serviceAccount created by user=%gcp.user userIP=%gcp.callerIP userAgent=%gcp.userAgent 
     authorizationInfo=%gcp.authorizationInfo 
+    rawRequest=%gcp.request
   priority: NOTICE
   source: gcp_auditlog
   tags: [GCP, IAM, 	abuse-elevation-control-mechanism]
@@ -328,6 +333,7 @@
     project=%json.value[/resource/labels/project_id]
     A GCP serviceAccount delete by user=%gcp.user userIP=%gcp.callerIP userAgent=%gcp.userAgent 
     authorizationInfo=%gcp.authorizationInfo 
+    rawRequest=%gcp.request
   priority: NOTICE
   source: gcp_auditlog
   tags: [GCP, IAM, 	abuse-elevation-control-mechanism]
@@ -339,6 +345,7 @@
     project=%json.value[/resource/labels/project_id]
     A GCP serviceAccount delete by user=%gcp.user userIP=%gcp.callerIP userAgent=%gcp.userAgent 
     authorizationInfo=%gcp.authorizationInfo 
+    rawRequest=%gcp.request
   priority: NOTICE
   source: gcp_auditlog
   tags: [GCP, IAM, 	abuse-elevation-control-mechanism]
@@ -351,6 +358,7 @@
     project=%json.value[/resource/labels/project_id]
     A GCP serviceAccount delete by user=%gcp.user userIP=%gcp.callerIP userAgent=%gcp.userAgent 
     authorizationInfo=%gcp.authorizationInfo 
+    rawRequest=%gcp.request
   priority: NOTICE
   source: gcp_auditlog
   tags: [GCP, IAM, 	abuse-elevation-control-mechanism]
@@ -363,6 +371,7 @@
     project=%json.value[/resource/labels/project_id]
     A GCP serviceAccount delete by user=%gcp.user userIP=%gcp.callerIP userAgent=%gcp.userAgent 
     authorizationInfo=%gcp.authorizationInfo 
+    rawRequest=%gcp.request
   priority: NOTICE
   source: gcp_auditlog
   tags: [GCP, IAM, 	abuse-elevation-control-mechanism]
@@ -374,6 +383,7 @@
     project=%json.value[/resource/labels/project_id]
     A GCP IAM custom role created by user=%gcp.user userIP=%gcp.callerIP userAgent=%gcp.userAgent 
     authorizationInfo=%gcp.authorizationInfo 
+    rawRequest=%gcp.request
   priority: NOTICE
   source: gcp_auditlog
   tags: [GCP, IAM, 	abuse-elevation-control-mechanism]
@@ -385,6 +395,7 @@
     project=%json.value[/resource/labels/project_id]
     A GCP IAM custom role modified by user=%gcp.user userIP=%gcp.callerIP userAgent=%gcp.userAgent 
     authorizationInfo=%gcp.authorizationInfo 
+    rawRequest=%gcp.request
   priority: NOTICE
   source: gcp_auditlog
   tags: [GCP, IAM, 	abuse-elevation-control-mechanism]
@@ -396,6 +407,7 @@
     project=%json.value[/resource/labels/project_id]
     A GCP IAM custom role modified by user=%gcp.user bindingPolicy=%gcp.policyDelta userIP=%gcp.callerIP userAgent=%gcp.userAgent 
     authorizationInfo=%gcp.authorizationInfo 
+    rawRequest=%gcp.request
   priority: NOTICE
   source: gcp_auditlog
   tags: [GCP, IAM, 	abuse-elevation-control-mechanism]
@@ -408,6 +420,7 @@
     project=%json.value[/resource/labels/project_id]
     A GCP cloud function is created by by user=%gcp.user userIP=%gcp.callerIP userAgent=%gcp.userAgent 
     authorizationInfo=%gcp.authorizationInfo 
+    rawRequest=%gcp.request
     functionName=%json.value[/resource/labels/function_name]
   priority: NOTICE
   source: gcp_auditlog
@@ -423,6 +436,7 @@
     project=%json.value[/resource/labels/project_id]
     A GCP cloud function is created by by user=%gcp.user userIP=%gcp.callerIP userAgent=%gcp.userAgent 
     authorizationInfo=%gcp.authorizationInfo 
+    rawRequest=%gcp.request
     functionName=%json.value[/resource/labels/function_name]
   priority: NOTICE
   source: gcp_auditlog
@@ -435,6 +449,7 @@
     project=%json.value[/resource/labels/project_id]
     A GCP KMS key ring is created by by user=%gcp.user userIP=%gcp.callerIP userAgent=%gcp.userAgent 
     authorizationInfo=%gcp.authorizationInfo 
+    rawRequest=%gcp.request
     ringName=%json.value[/resource/labels/key_ring_id]
   priority: NOTICE
   source: gcp_auditlog
@@ -447,6 +462,7 @@
     project=%json.value[/resource/labels/project_id]
     A GCP KMS is created by by user=%gcp.user userIP=%gcp.callerIP userAgent=%gcp.userAgent 
     authorizationInfo=%gcp.authorizationInfo 
+    rawRequest=%gcp.request
     keyName=%json.value[/resource/labels/crypto_key_id]
   priority: NOTICE
   source: gcp_auditlog
@@ -462,6 +478,7 @@
     project=%json.value[/resource/labels/project_id]
     A GCP KMS is destructed by by user=%gcp.user userIP=%gcp.callerIP userAgent=%gcp.userAgent 
     authorizationInfo=%gcp.authorizationInfo 
+    rawRequest=%gcp.request
     keyName=%json.value[/resource/labels/crypto_key_id]
   priority: NOTICE
   source: gcp_auditlog
@@ -474,6 +491,7 @@
     project=%json.value[/resource/labels/project_id]
     A GCP Pub/Sub topic has been deleted by user=%gcp.user userIP=%gcp.callerIP userAgent=%gcp.userAgent 
     authorizationInfo=%gcp.authorizationInfo 
+    rawRequest=%gcp.request
   priority: NOTICE
   source: gcp_auditlog
   tags: [GCP, Pub/Sub, TA0005-defense-evasion, T1562-impair-defenses]
@@ -487,6 +505,7 @@
     project=%json.value[/resource/labels/project_id]
     A GCP Pub/Sub Subscribtion has been updated/deleted by user=%gcp.user userIP=%gcp.callerIP userAgent=%gcp.userAgent 
     authorizationInfo=%gcp.authorizationInfo 
+    rawRequest=%gcp.request
   priority: NOTICE
   source: gcp_auditlog
   tags: [GCP, Pub/Sub, TA0005-defense-evasion, T1562-impair-defenses]
@@ -501,6 +520,7 @@
     project=%json.value[/resource/labels/project_id]
     A GCP Pub/Sub Subscribtion has been deleted by user=%gcp.user userIP=%gcp.callerIP userAgent=%gcp.userAgent 
     authorizationInfo=%gcp.authorizationInfo 
+    rawRequest=%gcp.request
   priority: NOTICE
   source: gcp_auditlog
   tags: [GCP, Sink, TA0005-defense-evasion, T1562-impair-defenses]

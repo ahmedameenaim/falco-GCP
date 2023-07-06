@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"strings"
 	"time"
 
@@ -16,7 +17,9 @@ func (auditlogsPlugin *Plugin) pullMsgsSync(ctx context.Context, projectID, subI
 	project_id := projectID
 	sub_id := subID
 
-	client, err := pubsub.NewClient(ctx, project_id, option.WithCredentialsFile("/home/sherlock/.config/gcloud/application_default_credentials.json"))
+	serviceAccountPath := os.Getenv("GCP_SERVICE_ACCOUNT_PATH")
+
+	client, err := pubsub.NewClient(ctx, project_id, option.WithCredentialsFile(serviceAccountPath))
 
 	if err != nil {
 		fmt.Printf("pubsub.NewClient: %v", err)
